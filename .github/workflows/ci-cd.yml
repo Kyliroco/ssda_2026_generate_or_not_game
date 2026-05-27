@@ -1,0 +1,136 @@
+name: CI and Docker Hub Publish
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: generate-or-not-web
+
+jobs:
+  runner-tests:
+    name: Runner Tests (Docker Compose)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose file
+        run: docker compose config
+
+      - name: Build web image
+        run: docker compose build web
+
+      - name: Start services
+        run: docker compose up -d db web
+
+      - name: Check web endpoints
+        run: |
+          set -euo pipefail
+
+          for _ in {1..30}; do
+            if curl -fsS http://localhost:6767/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://localhost:6767/ >/dev/null
+          curl -fsS http://localhost:6767/health
+
+      - name: Verify database is not published to host
+        run: |
+          set -euo pipefail
+
+          db_container_id="$(docker compose ps -q db)"
+          if [ -z "$db_container_id" ]; then
+            echo "Database container was not started."
+            exit 1
+          fi
+
+          published_ports="$(docker inspect --format '{{range $port, $bindings := .NetworkSettings.Ports}}{{if $bindings}}{{printf "%s " $port}}{{end}}{{end}}' "$db_container_id")"
+          if [ -n "$published_ports" ]; then
+            echo "Database must remain internal-only. Published ports found: $published_ports"
+            exit 1
+          fi
+
+      - name: Verify database starts empty
+        run: |
+          set -euo pipefail
+
+          set -a
+          source .env
+          set +a
+
+          table_count="$(docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog', 'information_schema');")"
+          if [ "$table_count" != "0" ]; then
+            echo "Expected an empty database, found $table_count non-system tables."
+            exit 1
+          fi
+
+      - name: Show container status
+        if: always()
+        run: docker compose ps
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Cleanup stack
+        if: always()
+        run: docker compose down -v
+
+  publish-dockerhub:
+    name: Publish Web Image to Docker Hub
+    runs-on: ubuntu-latest
+    needs: runner-tests
+    if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'master')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Hub secrets
+        run: |
+          if [ -z "${{ secrets.DOCKERUSER }}" ] || [ -z "${{ secrets.DOCKERPASS }}" ]; then
+            echo "Secrets DOCKERUSER and DOCKERPASS are required."
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERUSER }}
+          password: ${{ secrets.DOCKERPASS }}
+
+      - name: Extract image metadata
+        id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERUSER }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+            type=ref,event=branch
+            type=ref,event=tag
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          file: ./web/Dockerfile
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}

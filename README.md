@@ -1,1 +1,112 @@
-# ssda_2026_generate_or_not_game
+# Generate or Not - Minimal MVP
+
+This repository contains a minimal Docker MVP:
+
+- A web page served by a small Python web app.
+- A PostgreSQL SQL database that starts empty (no game tables, no seed data).
+- A Docker Compose v2 stack that runs everything together.
+
+## Architecture
+
+- `web` service:
+	- Exposed on host port `6767`.
+	- Serves the landing page at `/`.
+	- Exposes a basic health endpoint at `/health`.
+- `db` service:
+	- PostgreSQL 16.
+	- Uses a persistent Docker volume.
+	- Not exposed to the host (no published DB port).
+	- Reachable only by the app through the internal Compose network.
+
+## Requirements
+
+- Docker Engine with Docker Compose v2 support.
+
+## Quick Start
+
+1. Build and start the stack:
+
+	 ```bash
+	 docker compose up -d --build
+	 ```
+
+2. Open the web page:
+
+	 - `http://localhost:6767/`
+
+3. Check health:
+
+	 ```bash
+	 curl http://localhost:6767/health
+	 ```
+
+## Verify The Database Is Internal-Only
+
+Run:
+
+```bash
+docker compose ps
+```
+
+Expected result:
+
+- `web` shows `0.0.0.0:6767->6767/tcp` (or equivalent).
+- `db` shows no published host port.
+
+## Stop Or Reset
+
+- Stop containers (keep database data):
+
+	```bash
+	docker compose down
+	```
+
+- Stop and remove database data volume:
+
+	```bash
+	docker compose down -v
+	```
+
+## Easy-To-Modify Settings
+
+Edit `.env` to change:
+
+- `APP_PORT`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+
+## HTTPS Note
+
+This MVP serves HTTP on port `6767` inside the stack.
+For HTTPS, use your existing reverse proxy to terminate TLS and forward traffic to this app on port `6767`.
+
+## GitHub Runner CI
+
+The repository includes a GitHub Actions workflow at `.github/workflows/ci-cd.yml`.
+
+For every push and pull request, GitHub runners will:
+
+- Validate Docker Compose.
+- Build the web image.
+- Start the stack on the runner.
+- Check `/` and `/health`.
+- Verify the database is internal-only (no host-published DB port).
+- Verify the database starts empty.
+
+This allows you to rely on runner-based checks instead of local testing.
+
+## Docker Hub Auto Publish
+
+The same workflow publishes the web image to Docker Hub when code is pushed to `main` or `master`.
+
+Required repository secrets:
+
+- `DOCKERUSER`
+- `DOCKERPASS`
+
+Default Docker image name:
+
+- `${DOCKERUSER}/generate-or-not-web`
+
+To change the image name, edit `IMAGE_NAME` in `.github/workflows/ci-cd.yml`.
