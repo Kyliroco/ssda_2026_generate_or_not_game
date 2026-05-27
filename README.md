@@ -24,10 +24,11 @@ This repository contains a minimal Docker MVP:
 
 ## Quick Start
 
-1. Build and start the stack:
+1. Pull and start the stack:
 
    ```bash
-   docker compose up -d --build
+    docker compose pull web db
+    docker compose up -d
    ```
 
 2. Open the web page:
@@ -75,6 +76,10 @@ Edit `.env` to change:
 - `POSTGRES_USER`
 - `POSTGRES_PASSWORD`
 
+Optional image override:
+
+- `WEB_IMAGE` (default is `kyliroco/ssda2026:latest`)
+
 ## HTTPS Note
 
 This MVP serves HTTP on port `6767` inside the stack.
@@ -87,7 +92,7 @@ The repository includes a GitHub Actions workflow at `.github/workflows/ci-cd.ym
 For every push and pull request, GitHub runners will:
 
 - Validate Docker Compose.
-- Build the web image.
+- Pull the web image from Docker Hub.
 - Start the stack on the runner.
 - Check `/` and `/health`.
 - Verify the database is internal-only (no host-published DB port).

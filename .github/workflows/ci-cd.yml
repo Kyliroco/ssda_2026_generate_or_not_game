@@ -27,8 +27,8 @@ jobs:
       - name: Validate Docker Compose file
         run: docker compose config
 
-      - name: Build web image
-        run: docker compose build web
+      - name: Pull service images
+        run: docker compose pull web db
 
       - name: Start services
         run: docker compose up -d db web

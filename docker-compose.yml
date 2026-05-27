@@ -1,7 +1,7 @@
 services:
   web:
-    build:
-      context: ./web
+    image: ${WEB_IMAGE:-kyliroco/ssda2026:latest}
+    pull_policy: always
     env_file:
       - .env
     environment:
