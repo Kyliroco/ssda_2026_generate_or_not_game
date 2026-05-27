@@ -106,6 +106,8 @@ Required repository secrets:
 
 Default Docker image name:
 
-- `${DOCKERUSER}/generate-or-not-web`
+- `kyliroco/ssda2026`
 
-To change the image name, edit `IMAGE_NAME` in `.github/workflows/ci-cd.yml`.
+Set `DOCKERUSER=kyliroco` in GitHub secrets for Docker Hub login.
+
+To change the image name later, edit `DOCKER_IMAGE` in `.github/workflows/ci-cd.yml`.
