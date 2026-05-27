@@ -9,14 +9,14 @@ This repository contains a minimal Docker MVP:
 ## Architecture
 
 - `web` service:
-	- Exposed on host port `6767`.
-	- Serves the landing page at `/`.
-	- Exposes a basic health endpoint at `/health`.
+  - Exposed on host port `6767`.
+  - Serves the landing page at `/`.
+  - Exposes a basic health endpoint at `/health`.
 - `db` service:
-	- PostgreSQL 16.
-	- Uses a persistent Docker volume.
-	- Not exposed to the host (no published DB port).
-	- Reachable only by the app through the internal Compose network.
+  - PostgreSQL 16.
+  - Uses a persistent Docker volume.
+  - Not exposed to the host (no published DB port).
+  - Reachable only by the app through the internal Compose network.
 
 ## Requirements
 
@@ -26,19 +26,18 @@ This repository contains a minimal Docker MVP:
 
 1. Build and start the stack:
 
-	 ```bash
-	 docker compose up -d --build
-	 ```
+   ```bash
+   docker compose up -d --build
+   ```
 
 2. Open the web page:
-
-	 - `http://localhost:6767/`
+   - `http://localhost:6767/`
 
 3. Check health:
 
-	 ```bash
-	 curl http://localhost:6767/health
-	 ```
+   ```bash
+   curl http://localhost:6767/health
+   ```
 
 ## Verify The Database Is Internal-Only
 
@@ -57,15 +56,15 @@ Expected result:
 
 - Stop containers (keep database data):
 
-	```bash
-	docker compose down
-	```
+  ```bash
+  docker compose down
+  ```
 
 - Stop and remove database data volume:
 
-	```bash
-	docker compose down -v
-	```
+  ```bash
+  docker compose down -v
+  ```
 
 ## Easy-To-Modify Settings
 
