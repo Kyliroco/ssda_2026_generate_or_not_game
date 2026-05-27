@@ -69,16 +69,15 @@ Expected result:
 
 ## Easy-To-Modify Settings
 
-Edit `.env` to change:
+Values are hardcoded in `docker-compose.yml` for simplicity.
 
-- `APP_PORT`
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
+To change runtime settings, edit `docker-compose.yml` directly:
 
-Optional image override:
-
-- `WEB_IMAGE` (default is `kyliroco/ssda2026:latest`)
+- Web image: `kyliroco/ssda2026:latest`
+- Web published port: `6767:6767`
+- Database name: `generate_or_not`
+- Database user: `game_user`
+- Database password: `change_me_now`
 
 ## HTTPS Note
 

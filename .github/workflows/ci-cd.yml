@@ -67,11 +67,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          set -a
-          source .env
-          set +a
-
-          table_count="$(docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog', 'information_schema');")"
+          table_count="$(docker compose exec -T db psql -U game_user -d generate_or_not -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog', 'information_schema');")"
           if [ "$table_count" != "0" ]; then
             echo "Expected an empty database, found $table_count non-system tables."
             exit 1

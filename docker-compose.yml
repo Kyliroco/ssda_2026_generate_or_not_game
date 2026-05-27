@@ -1,33 +1,29 @@
 services:
   web:
-    image: ${WEB_IMAGE:-kyliroco/ssda2026:latest}
+    image: kyliroco/ssda2026:latest
     pull_policy: always
-    env_file:
-      - .env
     environment:
-      APP_PORT: ${APP_PORT}
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      APP_PORT: "6767"
+      DATABASE_URL: postgresql://game_user:change_me_now@db:5432/generate_or_not
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "${APP_PORT}:6767"
+      - "6767:6767"
     restart: unless-stopped
     networks:
       - app_net
 
   db:
     image: postgres:16-alpine
-    env_file:
-      - .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: generate_or_not
+      POSTGRES_USER: game_user
+      POSTGRES_PASSWORD: change_me_now
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U game_user -d generate_or_not"]
       interval: 10s
       timeout: 5s
       retries: 5
