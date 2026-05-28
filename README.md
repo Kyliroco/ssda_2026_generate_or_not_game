@@ -79,21 +79,22 @@ To change runtime settings, edit `docker-compose.yml` directly:
 - Database user: `game_user`
 - Database password: `change_me_now`
 
-## Image Dataset Layout (/data)
+## Image Dataset Layout (/data/data)
 
-The app reads images from `/data` inside the container.
+The app reads images from `/data/data` inside the container.
 
-With the current compose file, host `./data` is mounted to container `/data`.
+With the current compose file, host `./data` is mounted to container `/data`,
+so image files must be available under `/data/data`.
 
 Expected folders:
 
-- `/data/1` for category 1 (AI/synthetic)
-- `/data/2` for category 2 (human/real)
+- `/data/data/1` for category 1 (AI/synthetic)
+- `/data/data/2` for category 2 (human/real)
 
 Important behavior:
 
 - The scan is recursive in both category folders.
-- A category 1 image is only eligible when a file with the same filename exists somewhere under `/data/2`.
+- A category 1 image is only eligible when a file with the same filename exists somewhere under `/data/data/2`.
 - Category 2 images are eligible when they are valid image files.
 
 Supported image extensions:
@@ -104,15 +105,16 @@ Example layout:
 
 ```text
 /data
-  /1
-    /a01
+  /data
+    /1
+      /a01
+        a01-000u-00-01.png
+    /2
       a01-000u-00-01.png
-  /2
-    a01-000u-00-01.png
-    p01-147-01-03.png
+      p01-147-01-03.png
 ```
 
-In this example, `/data/1/a01/a01-000u-00-01.png` can be selected because `a01-000u-00-01.png` exists in `/data/2`.
+In this example, `/data/data/1/a01/a01-000u-00-01.png` can be selected because `a01-000u-00-01.png` exists in `/data/data/2`.
 
 ## HTTPS Note
 
