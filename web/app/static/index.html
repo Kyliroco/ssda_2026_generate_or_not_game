@@ -32,42 +32,47 @@
       color: var(--text);
     }
 
-    /* ── Screens ──────────────────────────────────────── */
-    .screen {
-      display: none;
-      min-height: 100svh;
-      padding: 1rem;
-      align-items: center;
-      justify-content: center;
+    /* ── Language switcher ──────────────────────────── */
+    .lang-bar {
+      position: fixed; top: .75rem; right: .75rem; z-index: 200;
+      display: flex; gap: .25rem;
+      background: rgba(255,255,255,.88); backdrop-filter: blur(6px);
+      border-radius: 9px; padding: .25rem; box-shadow: 0 2px 10px rgba(0,0,0,.1);
     }
+    .lang-btn {
+      padding: .28rem .58rem; border: none; border-radius: 6px;
+      font-size: .72rem; font-weight: 800; letter-spacing: .04em;
+      cursor: pointer; background: transparent; color: var(--muted);
+      transition: background var(--tr), color var(--tr);
+    }
+    .lang-btn.active { background: var(--accent); color: #fff; }
+    .lang-btn:hover:not(.active) { background: var(--border); color: var(--text); }
+
+    /* ── Screens ────────────────────────────────────── */
+    .screen { display: none; min-height: 100svh; padding: 1rem; align-items: center; justify-content: center; }
     .screen.active { display: flex; flex-direction: column; }
 
-    /* ── Card ────────────────────────────────────────── */
+    /* ── Card ───────────────────────────────────────── */
     .card {
-      width: 100%;
-      max-width: 540px;
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: clamp(1.4rem, 5vw, 2.4rem);
+      width: 100%; max-width: 540px;
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: clamp(1.4rem, 5vw, 2.4rem);
       animation: slideUp .35s ease both;
     }
-
     @keyframes slideUp {
       from { opacity: 0; transform: translateY(18px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* ── Typography ──────────────────────────────────── */
-    h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); font-weight: 900; line-height: 1.15; margin-bottom: .5rem; }
-    h2 { font-size: clamp(1.3rem, 4vw, 1.7rem); font-weight: 800; margin-bottom: .75rem; }
+    /* ── Typography ─────────────────────────────────── */
+    h1  { font-size: clamp(1.9rem, 5vw, 2.6rem); font-weight: 900; line-height: 1.15; margin-bottom: .5rem; }
+    h2  { font-size: clamp(1.3rem, 4vw, 1.7rem); font-weight: 800; margin-bottom: .75rem; }
     .sub { color: var(--muted); line-height: 1.65; margin-bottom: 1.8rem; font-size: .97rem; }
 
-    /* ── Buttons ─────────────────────────────────────── */
+    /* ── Buttons ────────────────────────────────────── */
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
-      width: 100%; padding: .85rem 1.4rem;
-      border: none; border-radius: 11px;
+      width: 100%; padding: .85rem 1.4rem; border: none; border-radius: 11px;
       font-size: 1rem; font-weight: 700; cursor: pointer;
       transition: background var(--tr), box-shadow var(--tr), transform var(--tr);
       user-select: none; -webkit-tap-highlight-color: transparent;
@@ -75,7 +80,7 @@
     .btn:active { transform: scale(.96); }
     .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 
-    .btn-primary  { background: var(--accent); color: #fff; }
+    .btn-primary { background: var(--accent); color: #fff; }
     .btn-primary:hover:not(:disabled) { background: var(--accent-h); box-shadow: 0 4px 14px rgba(231,111,81,.38); }
 
     .btn-ghost { background: transparent; border: 2px solid var(--border); color: var(--muted); margin-top: .5rem; }
@@ -86,12 +91,11 @@
     .btn-human { background: var(--hm-btn); color: #fff; flex: 1; }
     .btn-human:hover:not(:disabled) { background: var(--hm-btn-h); box-shadow: 0 4px 16px rgba(5,150,105,.38); }
 
-    /* ── Form ────────────────────────────────────────── */
+    /* ── Form ───────────────────────────────────────── */
     .field { margin-bottom: 1rem; }
     label {
-      display: block; font-size: .78rem; font-weight: 700;
-      color: var(--muted); text-transform: uppercase;
-      letter-spacing: .06em; margin-bottom: .32rem;
+      display: block; font-size: .78rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: .32rem;
     }
     input[type="email"], input[type="text"] {
       width: 100%; padding: .72rem 1rem;
@@ -104,20 +108,17 @@
     .err { color: #dc2626; font-size: .78rem; margin-top: .25rem; display: none; }
     .err.show { display: block; }
 
-    /* ── Progress ────────────────────────────────────── */
+    /* ── Progress ───────────────────────────────────── */
     .prog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; font-size: .88rem; font-weight: 700; }
     .prog-track  { height: 7px; background: var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 1.4rem; }
     .prog-fill   { height: 100%; background: linear-gradient(90deg, var(--accent), #f4a261); border-radius: 999px; transition: width .4s ease; }
 
-    /* ── Image zone ──────────────────────────────────── */
+    /* ── Image zone ─────────────────────────────────── */
     .img-zone {
-      width: 100%; aspect-ratio: 4/3;
-      border-radius: 12px; overflow: hidden;
+      width: 100%; aspect-ratio: 4/3; border-radius: 12px; overflow: hidden;
       background: #f1f5f9; margin-bottom: 1.4rem;
-      display: flex; align-items: center; justify-content: center;
-      position: relative;
+      display: flex; align-items: center; justify-content: center; position: relative;
     }
-
     .blue-circle {
       width: 52%; aspect-ratio: 1; border-radius: 50%;
       background: radial-gradient(circle at 32% 32%, #93c5fd 0%, #3b82f6 48%, #1e3a8a 100%);
@@ -125,29 +126,19 @@
       animation: pulse 3s ease-in-out infinite;
     }
     @keyframes pulse {
-      0%, 100% { transform: scale(1);    box-shadow: 0 10px 36px rgba(59,130,246,.4); }
-      50%       { transform: scale(1.04); box-shadow: 0 14px 48px rgba(59,130,246,.55); }
+      0%,100% { transform: scale(1);    box-shadow: 0 10px 36px rgba(59,130,246,.4); }
+      50%      { transform: scale(1.04); box-shadow: 0 14px 48px rgba(59,130,246,.55); }
     }
-
     .real-img { width: 100%; height: 100%; object-fit: cover; display: none; }
 
-    .img-reason {
-      margin-bottom: .9rem;
-      text-align: center;
-      font-size: .84rem;
-      color: #1e3a8a;
-      display: none;
-      line-height: 1.35;
-    }
-
-    /* ── Answer buttons ──────────────────────────────── */
+    /* ── Answer buttons ─────────────────────────────── */
     .answer-hint { text-align: center; font-size: .9rem; color: var(--muted); margin-bottom: .9rem; }
     .answer-row  { display: flex; gap: .7rem; }
 
-    /* ── Divider ─────────────────────────────────────── */
+    /* ── Divider ────────────────────────────────────── */
     .divider { height: 1px; background: var(--border); margin: 1.4rem 0; }
 
-    /* ── Score display ───────────────────────────────── */
+    /* ── Score display ──────────────────────────────── */
     .score-box {
       text-align: center; padding: 1.4rem 1rem;
       background: linear-gradient(135deg, #fdf4ff, #ede9fe);
@@ -156,13 +147,13 @@
     .score-big  { font-size: clamp(2.8rem, 10vw, 4.2rem); font-weight: 900; color: var(--accent); line-height: 1; }
     .score-of   { font-size: .95rem; color: var(--muted); margin-top: .2rem; }
     .score-pct  { font-size: 1.3rem; font-weight: 800; margin-top: .4rem; }
-    .score-msg  { font-size: .9rem;  margin-top: .5rem; }
+    .score-msg  { font-size: .9rem; margin-top: .5rem; }
     .c-green  { color: #059669; }
     .c-blue   { color: #3b82f6; }
     .c-orange { color: #f59e0b; }
     .c-red    { color: #dc2626; }
 
-    /* ── Leaderboard ─────────────────────────────────── */
+    /* ── Leaderboard ────────────────────────────────── */
     .lb-title { font-size: .95rem; font-weight: 800; margin-bottom: .65rem; display: flex; align-items: center; gap: .4rem; }
     .lb-row   { display: flex; align-items: center; padding: .55rem .7rem; border-radius: 9px; margin-bottom: .35rem; background: #f8fafc; }
     .lb-row.me { background: linear-gradient(135deg,#fff7ed,#ffedd5); font-weight: 700; }
@@ -174,7 +165,7 @@
     .lb-pts   { font-size: .88rem; font-weight: 800; color: var(--accent); }
     .lb-empty { text-align: center; color: var(--muted); font-size: .88rem; padding: .75rem 0; }
 
-    /* ── Spinner ─────────────────────────────────────── */
+    /* ── Spinner ────────────────────────────────────── */
     .spinner {
       width: 1.8rem; height: 1.8rem; margin: 1rem auto;
       border: 3px solid var(--border); border-top-color: var(--accent);
@@ -182,7 +173,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Toast ───────────────────────────────────────── */
+    /* ── Toast ──────────────────────────────────────── */
     #toast {
       position: fixed; bottom: 1.5rem; left: 50%;
       transform: translateX(-50%) translateY(5rem);
@@ -193,10 +184,8 @@
     }
     #toast.show { transform: translateX(-50%) translateY(0); }
 
-    /* ── Gap utility ─────────────────────────────────── */
     .gap { height: 1rem; }
 
-    /* ── Mobile ──────────────────────────────────────── */
     @media (max-width: 440px) {
       .answer-row { flex-direction: column; }
       .btn-ai, .btn-human { flex: unset; width: 100%; }
@@ -205,107 +194,267 @@
 </head>
 <body>
 
-<!-- ════════════════════ WELCOME ════════════════════ -->
+<!-- Language switcher -->
+<div class="lang-bar">
+  <button class="lang-btn active" id="lang-en" onclick="App.setLang('en')">EN</button>
+  <button class="lang-btn"        id="lang-es" onclick="App.setLang('es')">ES</button>
+  <button class="lang-btn"        id="lang-ca" onclick="App.setLang('ca')">CA</button>
+</div>
+
+<!-- ════════════ WELCOME ════════════ -->
 <div id="s-welcome" class="screen active">
   <div class="card">
     <div style="font-size:3.2rem;margin-bottom:.75rem;">✍️</div>
-    <h1>Generate<br>or Not?</h1>
-    <p class="sub">Can you tell the difference between AI-generated handwriting and real human writing? Face 20 challenges and climb the leaderboard!</p>
-    <button class="btn btn-primary" onclick="App.goRegister()">Play Now &rarr;</button>
+    <h1 data-i18n="welcome_title"></h1>
+    <p class="sub" data-i18n="welcome_sub"></p>
+    <button class="btn btn-primary" onclick="App.goRegister()" data-i18n="play_now"></button>
   </div>
 </div>
 
-<!-- ════════════════════ REGISTER ════════════════════ -->
+<!-- ════════════ REGISTER ════════════ -->
 <div id="s-register" class="screen">
   <div class="card">
-    <h2>Who are you?</h2>
-    <p class="sub" style="margin-bottom:1.4rem;">Your details appear on the leaderboard.</p>
+    <h2 data-i18n="who_are_you"></h2>
+    <p class="sub" style="margin-bottom:1.4rem;" data-i18n="register_sub"></p>
 
     <div class="field">
-      <label for="f-email">Email address</label>
-      <input type="email" id="f-email" placeholder="you@example.com" autocomplete="email">
-      <div class="err" id="e-email">Please enter a valid email address.</div>
+      <label for="f-email" data-i18n="email_label"></label>
+      <input type="email" id="f-email" autocomplete="email" data-i18n-ph="email_placeholder">
+      <div class="err" id="e-email" data-i18n="email_error"></div>
     </div>
     <div class="field">
-      <label for="f-first">First name</label>
-      <input type="text" id="f-first" placeholder="John" autocomplete="given-name">
-      <div class="err" id="e-first">Please enter your first name.</div>
+      <label for="f-first" data-i18n="first_label"></label>
+      <input type="text" id="f-first" autocomplete="given-name" data-i18n-ph="first_placeholder">
+      <div class="err" id="e-first" data-i18n="first_error"></div>
     </div>
     <div class="field">
-      <label for="f-last">Last name</label>
-      <input type="text" id="f-last" placeholder="Doe" autocomplete="family-name">
-      <div class="err" id="e-last">Please enter your last name.</div>
+      <label for="f-last" data-i18n="last_label"></label>
+      <input type="text" id="f-last" autocomplete="family-name" data-i18n-ph="last_placeholder">
+      <div class="err" id="e-last" data-i18n="last_error"></div>
     </div>
 
     <div class="gap"></div>
-    <button class="btn btn-primary" id="btn-go" onclick="App.startGame()">Start Playing &rarr;</button>
-    <button class="btn btn-ghost" onclick="App.goWelcome()">&larr; Back</button>
+    <button class="btn btn-primary" id="btn-go" onclick="App.startGame()" data-i18n="start_playing"></button>
+    <button class="btn btn-ghost"   onclick="App.goWelcome()" data-i18n="back"></button>
   </div>
 </div>
 
-<!-- ════════════════════ GAME ════════════════════════ -->
+<!-- ════════════ GAME ════════════ -->
 <div id="s-game" class="screen">
   <div class="card">
     <div class="prog-header">
-      <span id="q-label">Question 1 / 20</span>
+      <span id="q-label"></span>
     </div>
     <div class="prog-track"><div class="prog-fill" id="prog" style="width:0%"></div></div>
 
-    <div class="img-zone" id="img-zone">
+    <div class="img-zone">
       <div class="blue-circle" id="placeholder"></div>
       <img class="real-img" id="real-img" alt="Handwriting sample">
     </div>
     <p class="img-reason" id="img-reason"></p>
 
-    <p class="answer-hint">Is this text &hellip;</p>
-    <div class="answer-row" id="answer-row">
-      <button class="btn btn-ai"    id="btn-ai"    onclick="App.answer(1)">🤖 AI-Generated</button>
-      <button class="btn btn-human" id="btn-human" onclick="App.answer(2)">✍️ Human</button>
+    <p class="answer-hint" data-i18n="is_this_text"></p>
+    <div class="answer-row">
+      <button class="btn btn-ai"    id="btn-ai"    onclick="App.answer(1)" data-i18n="ai_btn"></button>
+      <button class="btn btn-human" id="btn-human" onclick="App.answer(2)" data-i18n="human_btn"></button>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════ RESULTS ════════════════════ -->
+<!-- ════════════ RESULTS ════════════ -->
 <div id="s-results" class="screen">
   <div class="card">
-    <h2 id="res-title">Game Over!</h2>
+    <h2 id="res-title"></h2>
 
     <div class="score-box">
-      <div class="score-big"  id="res-score">—</div>
-      <div class="score-of"   id="res-of">out of 20</div>
-      <div class="score-pct"  id="res-pct">—</div>
-      <div class="score-msg"  id="res-msg"></div>
+      <div class="score-big" id="res-score">—</div>
+      <div class="score-of"  id="res-of"></div>
+      <div class="score-pct" id="res-pct">—</div>
+      <div class="score-msg" id="res-msg"></div>
     </div>
 
-    <div class="lb-title">🏆 Leaderboard</div>
+    <div class="lb-title" data-i18n="leaderboard"></div>
     <div id="lb-body"><div class="spinner"></div></div>
 
     <div class="divider"></div>
-    <button class="btn btn-primary" onclick="App.playAgain()">Play Again</button>
-    <button class="btn btn-ghost"   onclick="App.changePlayer()">Change Player</button>
+    <button class="btn btn-primary" onclick="App.playAgain()"     data-i18n="play_again"></button>
+    <button class="btn btn-ghost"   onclick="App.changePlayer()"  data-i18n="change_player"></button>
   </div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
 <script>
 "use strict";
+
+// ── Translations ─────────────────────────────────────
+const LANGS = {
+  en: {
+    welcome_title:    "Generate<br>or Not?",
+    welcome_sub:      "Can you tell the difference between AI-generated handwriting and real human writing? Face 20 challenges and climb the leaderboard!",
+    play_now:         "Play Now →",
+    who_are_you:      "Who are you?",
+    register_sub:     "Your details appear on the leaderboard.",
+    email_label:      "Email address",
+    email_placeholder:"you@example.com",
+    email_error:      "Please enter a valid email address.",
+    first_label:      "First name",
+    first_placeholder:"John",
+    first_error:      "Please enter your first name.",
+    last_label:       "Last name",
+    last_placeholder: "Doe",
+    last_error:       "Please enter your last name.",
+    start_playing:    "Start Playing →",
+    back:             "← Back",
+    question_of:      "Question {n} / {total}",
+    is_this_text:     "Is this text …",
+    ai_btn:           "🤖 AI-Generated",
+    human_btn:        "✍️ Human",
+    leaderboard:      "🏆 Leaderboard",
+    play_again:       "Play Again",
+    change_player:    "Change Player",
+    out_of:           "out of {total}",
+    you_label:        "(you)",
+    no_scores:        "No scores yet — be the first!",
+    lb_error:         "Could not load leaderboard.",
+    server_error:     "Could not connect to the server. Please try again.",
+    answer_error:     "Error submitting answer. Please try again.",
+    game_error:       "Could not start a new game. Please try again.",
+    loading:          "Loading…",
+    grade_90_title:   "Outstanding! 🎉",
+    grade_90_msg:     "You’re a handwriting detective!",
+    grade_70_title:   "Great job! 👍",
+    grade_70_msg:     "You have a sharp eye.",
+    grade_50_title:   "Not bad! 🙂",
+    grade_50_msg:     "Keep practising!",
+    grade_0_title:    "Tough round 😅",
+    grade_0_msg:      "AI fooled you this time!",
+  },
+  es: {
+    welcome_title:    "¿Generado<br>o no?",
+    welcome_sub:      "¿Puedes distinguir entre escritura generada por IA y escritura humana real? ¡Supera 20 retos y escala en la clasificación!",
+    play_now:         "Jugar →",
+    who_are_you:      "¿Quién eres?",
+    register_sub:     "Tus datos aparecerán en la clasificación.",
+    email_label:      "Correo electrónico",
+    email_placeholder:"tu@ejemplo.com",
+    email_error:      "Por favor, introduce un correo válido.",
+    first_label:      "Nombre",
+    first_placeholder:"Juan",
+    first_error:      "Por favor, introduce tu nombre.",
+    last_label:       "Apellido",
+    last_placeholder: "García",
+    last_error:       "Por favor, introduce tu apellido.",
+    start_playing:    "Empezar →",
+    back:             "← Atrás",
+    question_of:      "Pregunta {n} / {total}",
+    is_this_text:     "Este texto es…",
+    ai_btn:           "🤖 Generado por IA",
+    human_btn:        "✍️ Humano",
+    leaderboard:      "🏆 Clasificación",
+    play_again:       "Jugar de nuevo",
+    change_player:    "Cambiar jugador",
+    out_of:           "de {total}",
+    you_label:        "(tú)",
+    no_scores:        "Aún no hay puntuaciones — ¡sé el primero!",
+    lb_error:         "No se pudo cargar la clasificación.",
+    server_error:     "No se pudo conectar al servidor. Inténtalo de nuevo.",
+    answer_error:     "Error al enviar la respuesta. Inténtalo de nuevo.",
+    game_error:       "No se pudo iniciar el juego. Inténtalo de nuevo.",
+    loading:          "Cargando…",
+    grade_90_title:   "¡Sobresaliente! 🎉",
+    grade_90_msg:     "¡Eres un detective de la escritura!",
+    grade_70_title:   "¡Muy bien! 👍",
+    grade_70_msg:     "Tienes un ojo muy agudo.",
+    grade_50_title:   "¡No está mal! 🙂",
+    grade_50_msg:     "¡Sigue practicando!",
+    grade_0_title:    "Ronda difícil 😅",
+    grade_0_msg:      "¡La IA te ha engañado esta vez!",
+  },
+  ca: {
+    welcome_title:    "Generat<br>o no?",
+    welcome_sub:      "Pots distingir entre escriptura generada per IA i escriptura humana real? Supera 20 reptes i puja al rànquing!",
+    play_now:         "Jugar →",
+    who_are_you:      "Qui ets?",
+    register_sub:     "Les teves dades apareixeran al rànquing.",
+    email_label:      "Adreça electrònica",
+    email_placeholder:"tu@exemple.com",
+    email_error:      "Si us plau, introdueix una adreça vàlida.",
+    first_label:      "Nom",
+    first_placeholder:"Joan",
+    first_error:      "Si us plau, introdueix el teu nom.",
+    last_label:       "Cognom",
+    last_placeholder: "Garcia",
+    last_error:       "Si us plau, introdueix el teu cognom.",
+    start_playing:    "Comença →",
+    back:             "← Enrere",
+    question_of:      "Pregunta {n} / {total}",
+    is_this_text:     "Aquest text és…",
+    ai_btn:           "🤖 Generat per IA",
+    human_btn:        "✍️ Humà",
+    leaderboard:      "🏆 Rànquing",
+    play_again:       "Torna a jugar",
+    change_player:    "Canvia de jugador",
+    out_of:           "de {total}",
+    you_label:        "(tu)",
+    no_scores:        "Encara no hi ha puntuacions — sigues el primer!",
+    lb_error:         "No s’ha pogut carregar el rànquing.",
+    server_error:     "No s’ha pogut connectar al servidor. Torna-ho a provar.",
+    answer_error:     "Error en enviar la resposta. Torna-ho a provar.",
+    game_error:       "No s’ha pogut iniciar el joc. Torna-ho a provar.",
+    loading:          "Carregant…",
+    grade_90_title:   "Excel·lent! 🎉",
+    grade_90_msg:     "Ets un detectiu de l’escriptura!",
+    grade_70_title:   "Molt bé! 👍",
+    grade_70_msg:     "Tens un ull molt fi.",
+    grade_50_title:   "No està malament! 🙂",
+    grade_50_msg:     "Continua practicant!",
+    grade_0_title:    "Ronda difícil 😅",
+    grade_0_msg:      "La IA t’ha enganyat aquesta vegada!",
+  },
+};
+
+// ── App ───────────────────────────────────────────────
 const App = (() => {
   const S = {
-    player:    null,
-    sessionId: null,
-    question:  null,
-    order:     0,
-    total:     20,
-    score:     0,
-    busy:      false,
+    player: null, sessionId: null, question: null,
+    order: 0, total: 20, score: 0, busy: false,
   };
 
-  // ── Screen helpers ───────────────────────────────────
-  const screens = ["welcome","register","game","results"];
+  let lang = localStorage.getItem("lang") || "en";
+
+  // ── i18n ────────────────────────────────────────────
+  function t(key, vars = {}) {
+    let str = (LANGS[lang] || LANGS.en)[key] || key;
+    Object.entries(vars).forEach(([k, v]) => { str = str.replace(`{${k}}`, v); });
+    return str;
+  }
+
+  function applyLang() {
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      el.innerHTML = t(el.dataset.i18n);
+    });
+    document.querySelectorAll("[data-i18n-ph]").forEach(el => {
+      el.placeholder = t(el.dataset.i18nPh);
+    });
+    ["en","es","ca"].forEach(code => {
+      document.getElementById("lang-" + code).classList.toggle("active", code === lang);
+    });
+    // Refresh dynamic content if already rendered
+    const gameVisible = document.getElementById("s-game").classList.contains("active");
+    if (gameVisible && S.question) renderQuestion();
+  }
+
+  function setLang(code) {
+    lang = code;
+    localStorage.setItem("lang", code);
+    applyLang();
+  }
+
+  // ── Screens ──────────────────────────────────────────
+  const SCREENS = ["welcome","register","game","results"];
   function show(name) {
-    screens.forEach(id => {
+    SCREENS.forEach(id => {
       const el = document.getElementById("s-" + id);
       const on = id === name;
       el.classList.toggle("active", on);
@@ -320,11 +469,10 @@ const App = (() => {
     });
   }
 
-  // ── Navigation ───────────────────────────────────────
   function goWelcome()  { show("welcome"); }
   function goRegister() { show("register"); document.getElementById("f-email").focus(); }
 
-  // ── Validation helpers ───────────────────────────────
+  // ── Form validation ──────────────────────────────────
   function setField(id, errId, bad) {
     document.getElementById(id).classList.toggle("invalid", bad);
     document.getElementById(errId).classList.toggle("show", bad);
@@ -343,30 +491,25 @@ const App = (() => {
     if (!emailOk || !first || !last) return;
 
     const btn = document.getElementById("btn-go");
-    btn.textContent = "Loading…"; btn.disabled = true;
+    btn.textContent = t("loading"); btn.disabled = true;
 
     try {
-      const pRes = await api("POST", "/api/players", { email, first_name: first, last_name: last });
-      S.player = pRes;
+      S.player = await api("POST", "/api/players", { email, first_name: first, last_name: last });
       await launchSession();
     } catch {
-      toast("Could not connect to the server. Please try again.");
+      toast(t("server_error"));
     } finally {
-      btn.textContent = "Start Playing →"; btn.disabled = false;
+      btn.innerHTML = t("start_playing"); btn.disabled = false;
     }
   }
 
   async function playAgain() {
     if (!S.player) { goRegister(); return; }
-    try {
-      await launchSession();
-    } catch {
-      toast("Could not start a new game. Please try again.");
-    }
+    try { await launchSession(); }
+    catch { toast(t("game_error")); }
   }
 
   function changePlayer() {
-    // Pre-fill form with current player
     if (S.player) {
       document.getElementById("f-email").value = S.player.email;
       document.getElementById("f-first").value = S.player.first_name;
@@ -390,7 +533,7 @@ const App = (() => {
   // ── Render question ──────────────────────────────────
   function renderQuestion() {
     const q = S.question;
-    document.getElementById("q-label").textContent = `Question ${q.order} / ${S.total}`;
+    document.getElementById("q-label").textContent = t("question_of", { n: q.order, total: S.total });
     document.getElementById("prog").style.width    = `${((q.order - 1) / S.total) * 100}%`;
 
     const ph       = document.getElementById("placeholder");
@@ -426,7 +569,6 @@ const App = (() => {
 
       img.src = `/api/images/${q.image_path}`;
     }
-
     setAnswerBtns(false);
   }
 
@@ -454,7 +596,7 @@ const App = (() => {
         renderQuestion();
       }
     } catch {
-      toast("Error submitting answer. Please try again.");
+      toast(t("answer_error"));
       S.busy = false;
       setAnswerBtns(false);
     }
@@ -471,18 +613,18 @@ const App = (() => {
 
     const pct = Math.round((score / total) * 100);
     document.getElementById("res-score").textContent = score;
-    document.getElementById("res-of").textContent    = `out of ${total}`;
+    document.getElementById("res-of").textContent    = t("out_of", { total });
     document.getElementById("res-pct").textContent   = `${pct}%`;
 
-    let title, cls, msg;
-    if (pct >= 90)      { title = "Outstanding! 🎉"; cls = "c-green";  msg = "You're a handwriting detective!"; }
-    else if (pct >= 70) { title = "Great job! 👍";   cls = "c-blue";   msg = "You have a sharp eye."; }
-    else if (pct >= 50) { title = "Not bad! 🙂";     cls = "c-orange"; msg = "Keep practising!"; }
-    else                { title = "Tough round 😅";  cls = "c-red";    msg = "AI fooled you this time!"; }
+    let titleKey, msgKey, cls;
+    if (pct >= 90)      { titleKey = "grade_90_title"; msgKey = "grade_90_msg"; cls = "c-green"; }
+    else if (pct >= 70) { titleKey = "grade_70_title"; msgKey = "grade_70_msg"; cls = "c-blue"; }
+    else if (pct >= 50) { titleKey = "grade_50_title"; msgKey = "grade_50_msg"; cls = "c-orange"; }
+    else                { titleKey = "grade_0_title";  msgKey = "grade_0_msg";  cls = "c-red"; }
 
-    document.getElementById("res-title").textContent = title;
+    document.getElementById("res-title").textContent = t(titleKey);
     const msgEl = document.getElementById("res-msg");
-    msgEl.textContent = msg; msgEl.className = "score-msg " + cls;
+    msgEl.textContent = t(msgKey); msgEl.className = "score-msg " + cls;
 
     document.getElementById("lb-body").innerHTML = '<div class="spinner"></div>';
 
@@ -490,13 +632,13 @@ const App = (() => {
       const lb = await api("GET", "/api/leaderboard?limit=10");
       renderLeaderboard(lb, score);
     } catch {
-      document.getElementById("lb-body").innerHTML = '<p class="lb-empty">Could not load leaderboard.</p>';
+      document.getElementById("lb-body").innerHTML = `<p class="lb-empty">${t("lb_error")}</p>`;
     }
   }
 
   function renderLeaderboard(rows, currentScore) {
     if (!rows.length) {
-      document.getElementById("lb-body").innerHTML = '<p class="lb-empty">No scores yet — be the first!</p>';
+      document.getElementById("lb-body").innerHTML = `<p class="lb-empty">${t("no_scores")}</p>`;
       return;
     }
     const html = rows.map((r, i) => {
@@ -515,21 +657,20 @@ const App = (() => {
       }
       return `<div class="lb-row${me ? " me" : ""}">
         <div class="lb-rank ${rankCls}">${rankMark}</div>
-        <div class="lb-name">${esc(r.name)}${me ? ' <span style="color:var(--accent);font-size:.78rem">(you)</span>' : ""}</div>
+        <div class="lb-name">${esc(r.name)}${me ? ` <span style="color:var(--accent);font-size:.78rem">${t("you_label")}</span>` : ""}</div>
         <div class="lb-pts">${r.best_score}/${r.total_questions}</div>
       </div>`;
     }).join("");
     document.getElementById("lb-body").innerHTML = html;
   }
 
-  // ── Toast ─────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────
   function toast(msg) {
     const el = document.getElementById("toast");
     el.textContent = msg; el.classList.add("show");
     setTimeout(() => el.classList.remove("show"), 3200);
   }
 
-  // ── Fetch helper ─────────────────────────────────────
   async function api(method, url, body) {
     const opts = { method, headers: { "Content-Type": "application/json" } };
     if (body) opts.body = JSON.stringify(body);
@@ -546,7 +687,10 @@ const App = (() => {
       .replaceAll("\"", "&quot;");
   }
 
-  return { goWelcome, goRegister, startGame, answer, playAgain, changePlayer };
+  // Init
+  document.addEventListener("DOMContentLoaded", applyLang);
+
+  return { goWelcome, goRegister, startGame, answer, playAgain, changePlayer, setLang };
 })();
 </script>
 </body>

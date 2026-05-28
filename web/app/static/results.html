@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generate or Not — Results</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-start: #edf6f9;
+      --bg-end:   #ffddd2;
+      --card:     #ffffff;
+      --text:     #14213d;
+      --muted:    #6b7280;
+      --border:   #e5e7eb;
+      --accent:   #e76f51;
+      --accent-h: #d4604a;
+      --green:    #059669;
+      --red:      #dc2626;
+      --orange:   #d97706;
+      --blue:     #3b82f6;
+      --shadow:   0 4px 20px rgba(20,33,61,0.10);
+      --radius:   14px;
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
+      background: linear-gradient(150deg, var(--bg-start) 0%, var(--bg-end) 100%) fixed;
+      color: var(--text);
+    }
+
+    .page { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+    .gap  { height: 1.25rem; }
+
+    /* ── Header ─────────────────────────────────────── */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.5rem; flex-wrap: wrap; gap: .75rem;
+    }
+    .header-left { display: flex; align-items: center; gap: .75rem; }
+    .header h1   { font-size: clamp(1.3rem, 3vw, 1.7rem); font-weight: 900; }
+    .header-right { display: flex; gap: .5rem; }
+
+    .btn-sm {
+      display: inline-flex; align-items: center; gap: .35rem;
+      padding: .45rem .9rem; border: none; border-radius: 8px;
+      font-size: .85rem; font-weight: 700; cursor: pointer;
+      transition: background .2s, box-shadow .2s; text-decoration: none;
+    }
+    .btn-sm:active { transform: scale(.96); }
+    .btn-outline { background: var(--card); border: 2px solid var(--border); color: var(--muted); }
+    .btn-outline:hover { border-color: var(--muted); color: var(--text); }
+    .btn-accent  { background: var(--accent); color: #fff; }
+    .btn-accent:hover { background: var(--accent-h); box-shadow: 0 3px 10px rgba(231,111,81,.35); }
+
+    /* ── Stats grid ─────────────────────────────────── */
+    .stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: .85rem; margin-bottom: 1.25rem;
+    }
+    .stat-card {
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 1.1rem 1rem; text-align: center;
+    }
+    .stat-icon  { font-size: 1.4rem; margin-bottom: .25rem; }
+    .stat-val   { font-size: 1.8rem; font-weight: 900; color: var(--accent); line-height: 1; }
+    .stat-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-top: .3rem; }
+    .stat-sub   { font-size: .78rem; color: var(--muted); margin-top: .15rem; }
+
+    /* ── Confusion matrix card ──────────────────────── */
+    .cm-card {
+      background: var(--card); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 1.4rem 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .cm-card-title {
+      font-size: 1rem; font-weight: 800; margin-bottom: 1.25rem;
+      display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+    }
+    .cm-total { font-size: .8rem; font-weight: 600; color: var(--muted); }
+
+    .cm-layout { display: flex; gap: 2.5rem; flex-wrap: wrap; align-items: flex-start; }
+
+    /* Matrix */
+    .cm-matrix-wrap { display: flex; flex-direction: column; gap: .3rem; }
+    .cm-x-label {
+      text-align: center; font-size: .7rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+      margin-left: 80px;
+    }
+    .cm-inner { display: flex; gap: .4rem; }
+    .cm-y-label {
+      writing-mode: vertical-rl; transform: rotate(180deg); text-align: center;
+      font-size: .7rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--muted); width: 16px;
+    }
+    .cm-grid { display: grid; grid-template-columns: 72px 1fr 1fr; gap: 5px; }
+    .cm-spacer { }
+    .cm-col-hdr {
+      text-align: center; font-size: .78rem; font-weight: 800;
+      padding: .35rem .5rem; color: var(--text);
+    }
+    .cm-row-hdr {
+      display: flex; align-items: center; justify-content: flex-end;
+      font-size: .78rem; font-weight: 800; padding-right: .6rem; color: var(--text);
+    }
+    .cm-cell {
+      width: 120px; height: 96px; border-radius: 12px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 2px;
+      transition: transform .15s;
+    }
+    .cm-cell:hover { transform: scale(1.03); }
+    .cm-cell.diag { background: #d1fae5; }
+    .cm-cell.off  { background: #fee2e2; }
+    .cm-n   { font-size: 2rem; font-weight: 900; line-height: 1; }
+    .cm-cell.diag .cm-n { color: #065f46; }
+    .cm-cell.off  .cm-n { color: #991b1b; }
+    .cm-pct { font-size: .75rem; font-weight: 700; }
+    .cm-cell.diag .cm-pct { color: #059669; }
+    .cm-cell.off  .cm-pct { color: #dc2626; }
+    .cm-tag { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+
+    /* Metrics */
+    .cm-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; flex: 1; min-width: 200px; align-content: start; }
+    .cm-met {
+      background: #f8fafc; border-radius: 10px; padding: .75rem .9rem;
+      border-left: 3px solid var(--border);
+    }
+    .cm-met.good { border-left-color: var(--green); }
+    .cm-met.warn { border-left-color: var(--orange); }
+    .cm-met.bad  { border-left-color: var(--red); }
+    .cm-met-val { font-size: 1.5rem; font-weight: 900; color: var(--text); }
+    .cm-met-lbl { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-top: .2rem; }
+    .cm-met-desc { font-size: .7rem; color: var(--muted); margin-top: .1rem; }
+
+    /* ── Table card ─────────────────────────────────── */
+    .table-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+
+    .tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); }
+    .tab-btn {
+      padding: .75rem 1.3rem; border: none; background: none;
+      font-size: .88rem; font-weight: 700; cursor: pointer; color: var(--muted);
+      border-bottom: 3px solid transparent; margin-bottom: -2px;
+      transition: color .2s, border-color .2s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .75rem 1rem; border-bottom: 1px solid var(--border); gap: .75rem; flex-wrap: wrap;
+    }
+    .search {
+      display: flex; align-items: center; gap: .4rem;
+      border: 2px solid var(--border); border-radius: 8px;
+      padding: .35rem .7rem; background: #f8fafc; transition: border-color .2s;
+    }
+    .search:focus-within { border-color: var(--accent); background: #fff; }
+    .search input { border: none; background: none; outline: none; font-size: .88rem; width: 220px; color: var(--text); }
+    .row-count { font-size: .8rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
+
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+    thead th {
+      padding: .6rem .9rem; text-align: left;
+      font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--muted); background: #f8fafc; cursor: pointer; user-select: none;
+    }
+    thead th:hover { color: var(--text); }
+    thead th.asc::after  { content: " ↑"; color: var(--accent); }
+    thead th.desc::after { content: " ↓"; color: var(--accent); }
+    tbody td { padding: .5rem .9rem; border-top: 1px solid var(--border); font-size: .85rem; vertical-align: middle; }
+    tbody tr:hover td { background: #f8fafc; }
+    tbody tr.r-correct td { background: #f0fdf4; }
+    tbody tr.r-wrong   td { background: #fef2f2; }
+    tbody tr.r-pending td { color: var(--muted); }
+    tbody tr.r-correct:hover td, tbody tr.r-wrong:hover td { filter: brightness(.97); }
+
+    /* ── Badges ──────────────────────────────────────── */
+    .badge { display: inline-block; padding: .15rem .55rem; border-radius: 999px; font-size: .72rem; font-weight: 700; white-space: nowrap; }
+    .b-green  { background: #d1fae5; color: #065f46; }
+    .b-red    { background: #fee2e2; color: #991b1b; }
+    .b-gray   { background: #f1f5f9; color: var(--muted); }
+    .b-orange { background: #fef3c7; color: #92400e; }
+    .b-blue   { background: #dbeafe; color: #1e40af; }
+
+    .empty { text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: .9rem; }
+
+    .spinner {
+      width: 2rem; height: 2rem; margin: 3rem auto; display: block;
+      border: 3px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .tab-btn { padding: .65rem .75rem; font-size: .8rem; }
+      .search input { width: 130px; }
+      .cm-cell { width: 90px; height: 80px; }
+      .cm-n { font-size: 1.5rem; }
+      .cm-metrics { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <span style="font-size:1.6rem">📊</span>
+      <h1>Database Results</h1>
+    </div>
+    <div class="header-right">
+      <a href="/" class="btn-sm btn-outline">← Game</a>
+      <button class="btn-sm btn-accent" onclick="Admin.refresh()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats" id="stats-row">
+    <div class="stat-card"><div class="spinner"></div></div>
+  </div>
+
+  <!-- Confusion matrix -->
+  <div class="cm-card" id="cm-card">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Table card -->
+  <div class="table-card">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="Admin.setTab('players')"   id="tab-players">👤 Players</button>
+      <button class="tab-btn"        onclick="Admin.setTab('sessions')"  id="tab-sessions">🎮 Sessions</button>
+      <button class="tab-btn"        onclick="Admin.setTab('questions')" id="tab-questions">📝 Questions</button>
+    </div>
+    <div class="toolbar">
+      <div class="search">
+        <span style="color:var(--muted);font-size:.9rem">🔍</span>
+        <input type="text" id="search-input" placeholder="Filter rows…" oninput="Admin.filter(this.value)">
+      </div>
+      <span class="row-count" id="row-count"></span>
+    </div>
+    <div class="tbl-wrap" id="tbl-wrap">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+</div>
+<script>
+"use strict";
+const Admin = (() => {
+  const D = { stats: null, confusion: null, players: null, sessions: null, questions: null };
+  let currentTab = "players";
+  let filterText = "";
+  let sortCol    = null;
+  let sortDir    = 1;
+
+  // ── Bootstrap ────────────────────────────────────────
+  async function init() {
+    await Promise.all(["stats","confusion","players","sessions","questions"].map(load));
+    renderStats();
+    renderConfusion();
+    renderTable();
+  }
+
+  async function refresh() {
+    Object.keys(D).forEach(k => D[k] = null);
+    document.getElementById("tbl-wrap").innerHTML  = '<div class="spinner"></div>';
+    document.getElementById("stats-row").innerHTML = '<div class="stat-card"><div class="spinner"></div></div>';
+    document.getElementById("cm-card").innerHTML   = '<div class="spinner"></div>';
+    await init();
+  }
+
+  async function load(key) {
+    try {
+      const res = await fetch(`/api/admin/${key}`);
+      D[key] = await res.json();
+    } catch {
+      D[key] = (key === "stats" || key === "confusion") ? {} : [];
+    }
+  }
+
+  // ── Stats ─────────────────────────────────────────────
+  function renderStats() {
+    const s = D.stats || {};
+    const correctPct = s.total_answers
+      ? Math.round((s.correct_answers / s.total_answers) * 100) : null;
+    document.getElementById("stats-row").innerHTML =
+      statCard("👤", s.total_players ?? "—", "Players") +
+      statCard("🎮", s.total_sessions ?? "—", "Sessions", s.finished_sessions != null ? `${s.finished_sessions} finished` : "") +
+      statCard("📊", s.avg_pct != null ? s.avg_pct + "%" : "—", "Avg Score") +
+      statCard("✅", correctPct != null ? correctPct + "%" : "—", "Correct Rate",
+               s.total_answers != null ? `${s.correct_answers}/${s.total_answers} answers` : "");
+  }
+
+  function statCard(icon, val, label, sub = "") {
+    return `<div class="stat-card">
+      <div class="stat-icon">${icon}</div>
+      <div class="stat-val">${val}</div>
+      <div class="stat-label">${label}</div>
+      ${sub ? `<div class="stat-sub">${sub}</div>` : ""}
+    </div>`;
+  }
+
+  // ── Confusion matrix ──────────────────────────────────
+  function renderConfusion() {
+    const c = D.confusion || {};
+    const m = c.matrix || {};
+    const met = c.metrics || {};
+    const N = c.total || 0;
+
+    function pctOf(n) { return N ? (n / N * 100).toFixed(1) + "%" : "—"; }
+
+    function cmCell(n, isCorrect, tagLabel) {
+      const cls = isCorrect ? "diag" : "off";
+      return `<div class="cm-cell ${cls}">
+        <div class="cm-n">${n ?? 0}</div>
+        <div class="cm-pct">${pctOf(n ?? 0)}</div>
+        <div class="cm-tag">${tagLabel}</div>
+      </div>`;
+    }
+
+    function metColor(val) {
+      if (val == null) return "";
+      return val >= 70 ? "good" : val >= 50 ? "warn" : "bad";
+    }
+
+    function metCard(val, label, desc) {
+      const display = val != null ? val + "%" : "—";
+      return `<div class="cm-met ${metColor(val)}">
+        <div class="cm-met-val">${display}</div>
+        <div class="cm-met-lbl">${label}</div>
+        <div class="cm-met-desc">${desc}</div>
+      </div>`;
+    }
+
+    if (N === 0) {
+      document.getElementById("cm-card").innerHTML = `
+        <div class="cm-card-title">🎯 Confusion Matrix</div>
+        <div class="empty">No answered questions yet.</div>`;
+      return;
+    }
+
+    document.getElementById("cm-card").innerHTML = `
+      <div class="cm-card-title">
+        🎯 Confusion Matrix
+        <span class="cm-total">N = ${N} answers</span>
+      </div>
+      <div class="cm-layout">
+
+        <div class="cm-matrix-wrap">
+          <div class="cm-x-label">↔ What users said</div>
+          <div class="cm-inner">
+            <div class="cm-y-label">↕ What it really is</div>
+            <div class="cm-grid">
+              <div class="cm-spacer"></div>
+              <div class="cm-col-hdr">🤖 AI</div>
+              <div class="cm-col-hdr">✍️ Human</div>
+
+              <div class="cm-row-hdr">🤖 AI</div>
+              ${cmCell(m.ai_ai,    true,  "True Positive")}
+              ${cmCell(m.ai_human, false, "False Negative")}
+
+              <div class="cm-row-hdr">✍️ Human</div>
+              ${cmCell(m.human_ai,    false, "False Positive")}
+              ${cmCell(m.human_human, true,  "True Negative")}
+            </div>
+          </div>
+        </div>
+
+        <div class="cm-metrics">
+          ${metCard(met_acc(m, N),    "Accuracy",        "Overall correct rate")}
+          ${metCard(met.recall_ai,    "AI Recall",       "AI images spotted")}
+          ${metCard(met.recall_human, "Human Recall",    "Human images spotted")}
+          ${metCard(met.precision_ai, "AI Precision",    "\"AI\" guesses that were right")}
+          ${metCard(met.f1_ai,        "F1 Score (AI)",   "Harmonic mean P/R for AI")}
+        </div>
+
+      </div>`;
+  }
+
+  function met_acc(m, N) {
+    if (!N) return null;
+    return parseFloat((((m.ai_ai || 0) + (m.human_human || 0)) / N * 100).toFixed(1));
+  }
+
+  // ── Tabs ──────────────────────────────────────────────
+  function setTab(name) {
+    currentTab = name; filterText = ""; sortCol = null; sortDir = 1;
+    document.getElementById("search-input").value = "";
+    ["players","sessions","questions"].forEach(t =>
+      document.getElementById("tab-" + t).classList.toggle("active", t === name)
+    );
+    renderTable();
+  }
+
+  function filter(text) { filterText = text.toLowerCase(); renderTable(); }
+
+  function sortBy(col) {
+    if (sortCol === col) sortDir = -sortDir; else { sortCol = col; sortDir = 1; }
+    renderTable();
+  }
+
+  // ── Table rendering ───────────────────────────────────
+  function renderTable() {
+    const wrap = document.getElementById("tbl-wrap");
+    if (!D[currentTab]) { wrap.innerHTML = '<div class="spinner"></div>'; return; }
+
+    const defs = tableDefs[currentTab];
+    let rows = [...(D[currentTab] || [])];
+
+    if (filterText)
+      rows = rows.filter(r => defs.cols.some(c => String(rawCell(r, c)).toLowerCase().includes(filterText)));
+
+    if (sortCol !== null) {
+      const c = defs.cols[sortCol];
+      rows.sort((a, b) => {
+        const av = rawCell(a, c), bv = rawCell(b, c);
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1; if (bv == null) return -1;
+        return av < bv ? -sortDir : av > bv ? sortDir : 0;
+      });
+    }
+
+    document.getElementById("row-count").textContent = `${rows.length} row${rows.length !== 1 ? "s" : ""}`;
+
+    if (!rows.length) { wrap.innerHTML = '<div class="empty">No data found.</div>'; return; }
+
+    const thead = defs.cols.map((c, i) => {
+      const cls = sortCol === i ? (sortDir === 1 ? " asc" : " desc") : "";
+      return `<th class="${cls}" onclick="Admin.sortBy(${i})">${c.label}</th>`;
+    }).join("");
+
+    const tbody = rows.map(r => {
+      const rowCls = defs.rowClass ? defs.rowClass(r) : "";
+      const cells  = defs.cols.map(c => `<td>${renderCell(r, c)}</td>`).join("");
+      return `<tr class="${rowCls}">${cells}</tr>`;
+    }).join("");
+
+    wrap.innerHTML = `<table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
+  }
+
+  // ── Column definitions ────────────────────────────────
+  const tableDefs = {
+    players: {
+      rowClass: () => "",
+      cols: [
+        { label: "ID",         key: "id" },
+        { label: "First Name", key: "first_name" },
+        { label: "Last Name",  key: "last_name" },
+        { label: "Email",      key: "email" },
+        { label: "Registered", key: "created_at",  fmt: fmtDate },
+        { label: "Sessions",   key: "session_count" },
+        { label: "Best Score", key: "best_score",  fmt: (v, r) =>
+            v != null ? `<span class="badge b-blue">${v}/${r.best_total}</span>` : `<span class="badge b-gray">—</span>` },
+      ],
+    },
+    sessions: {
+      rowClass: r => r.finished_at ? "" : "r-pending",
+      cols: [
+        { label: "ID",       key: "id" },
+        { label: "Player",   key: "player_name" },
+        { label: "Started",  key: "started_at",  fmt: fmtDate },
+        { label: "Finished", key: "finished_at", fmt: v => v ? fmtDate(v) : `<span class="badge b-orange">In progress</span>` },
+        { label: "Score",    key: "score",       fmt: (v, r) =>
+            v != null
+              ? `<span class="badge ${v/r.total_questions>=.7?"b-green":v/r.total_questions>=.5?"b-blue":"b-red"}">${v}/${r.total_questions}</span>`
+              : `<span class="badge b-gray">—</span>` },
+        { label: "Status",   key: "finished_at", fmt: v =>
+            v ? `<span class="badge b-green">Finished</span>` : `<span class="badge b-orange">In progress</span>` },
+        { label: "Duration", key: "_dur", fmt: (_, r) => r.finished_at ? fmtDur(r.started_at, r.finished_at) : "—" },
+      ],
+    },
+    questions: {
+      rowClass: r => r.answered_at == null ? "r-pending" : r.is_correct ? "r-correct" : "r-wrong",
+      cols: [
+        { label: "ID",             key: "id" },
+        { label: "Session",        key: "session_id" },
+        { label: "Player",         key: "player_name" },
+        { label: "Q#",             key: "question_order" },
+        { label: "Image Path",     key: "image_path" },
+        { label: "Submitted Path", key: "submitted_image_path", fmt: v => v ?? `<span style="color:var(--muted)">—</span>` },
+        { label: "Correct",        key: "correct_category",     fmt: catBadge },
+        { label: "Answer",         key: "user_answer",          fmt: v => v != null ? catBadge(v) : `<span class="badge b-gray">—</span>` },
+        { label: "Result",         key: "is_correct",           fmt: v =>
+            v == null ? `<span class="badge b-gray">—</span>` :
+            v ? `<span class="badge b-green">✓ Correct</span>` : `<span class="badge b-red">✗ Wrong</span>` },
+        { label: "Answered At",    key: "answered_at", fmt: v => v ? fmtDate(v) : `<span style="color:var(--muted)">—</span>` },
+      ],
+    },
+  };
+
+  // ── Helpers ───────────────────────────────────────────
+  function rawCell(row, col) { return row[col.key]; }
+
+  function renderCell(row, col) {
+    const v = row[col.key];
+    if (col.fmt) return col.fmt(v, row);
+    if (v == null) return `<span style="color:var(--muted)">—</span>`;
+    return esc(String(v));
+  }
+
+  function catBadge(v) {
+    return v === 1
+      ? `<span class="badge b-blue">🤖 AI</span>`
+      : `<span class="badge b-green">✍️ Human</span>`;
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleString("fr-FR", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    });
+  }
+
+  function fmtDur(s, e) {
+    const d = Math.round((new Date(e) - new Date(s)) / 1000);
+    if (d < 60)   return `${d}s`;
+    if (d < 3600) return `${Math.floor(d/60)}m ${d%60}s`;
+    return `${Math.floor(d/3600)}h ${Math.floor((d%3600)/60)}m`;
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+  return { setTab, filter, sortBy, refresh };
+})();
+</script>
+</body>
+</html>
