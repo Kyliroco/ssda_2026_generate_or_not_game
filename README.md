@@ -90,12 +90,9 @@ The repository includes a GitHub Actions workflow at `.github/workflows/ci-cd.ym
 
 For every push and pull request, GitHub runners will:
 
-- Validate Docker Compose.
-- Pull the web image from Docker Hub.
-- Start the stack on the runner.
+- Build the web Docker image.
+- Run a container from that image.
 - Check `/` and `/health`.
-- Verify the database is internal-only (no host-published DB port).
-- Verify the database starts empty.
 
 This allows you to rely on runner-based checks instead of local testing.
 
