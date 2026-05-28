@@ -18,6 +18,7 @@ APP_TITLE: Final[str] = "Generate or Not"
 DATABASE_URL_KEY: Final[str] = "DATABASE_URL"
 STATIC_DIR: Path = Path(__file__).parent / "static"
 DATA_DIR: Final[str] = "/data/data"
+IMAGE_DATASETS: Final[tuple[int, ...]] = (1, 2, 3, 4)
 logger = logging.getLogger(__name__)
 
 _SAFE_CHARS = frozenset(
@@ -96,13 +97,13 @@ def serve_image(category: int, file_path: str) -> FileResponse:
     """Serve one image file from a category folder.
 
     Args:
-        category: Image category (1 or 2).
+        category: Image category (1, 2, 3 or 4).
         file_path: Relative file path under the category folder.
 
     Returns:
         The requested image file response.
     """
-    if category not in (1, 2):
+    if category not in IMAGE_DATASETS:
         logger.warning("Image request rejected: unknown category=%s path=%s", category, file_path)
         raise HTTPException(status_code=404, detail="Category not found")
     if not _is_safe_relative_path(file_path):

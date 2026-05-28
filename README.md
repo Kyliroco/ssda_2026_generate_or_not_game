@@ -88,14 +88,17 @@ so image files must be available under `/data/data`.
 
 Expected folders:
 
-- `/data/data/1` for category 1 (AI/synthetic)
-- `/data/data/2` for category 2 (human/real)
+- `/data/data/1` for altered/AI dataset A
+- `/data/data/3` for altered/AI dataset B
+- `/data/data/4` for altered/AI dataset C
+- `/data/data/2` for human/real images
 
 Important behavior:
 
-- The scan is recursive in both category folders.
-- A category 1 image is only eligible when a file with the same filename exists somewhere under `/data/data/2`.
-- Category 2 images are eligible when they are valid image files.
+- The scan is recursive in dataset folders `/1`, `/2`, `/3`, and `/4`.
+- Altered images from `/1`, `/3`, `/4` are only eligible when the same filename exists somewhere under `/data/data/2`.
+- For an altered question, the app performs a second random choice to pick one available altered dataset among `/1`, `/3`, `/4`.
+- Human images are read from `/data/data/2`.
 
 Supported image extensions:
 
@@ -109,12 +112,19 @@ Example layout:
     /1
       /a01
         a01-000u-00-01.png
+    /3
+      /variant_b
+        a01-000u-00-01.png
+    /4
+      /variant_c
+        a01-000u-00-01.png
     /2
       a01-000u-00-01.png
       p01-147-01-03.png
 ```
 
-In this example, `/data/data/1/a01/a01-000u-00-01.png` can be selected because `a01-000u-00-01.png` exists in `/data/data/2`.
+In this example, `a01-000u-00-01.png` can be selected for altered questions because it exists in `/data/data/2`,
+then one source is chosen randomly between `/data/data/1`, `/data/data/3`, and `/data/data/4`.
 
 ## HTTPS Note
 

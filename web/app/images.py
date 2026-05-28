@@ -8,6 +8,8 @@ from typing import Final
 DATA_DIR: Final[Path] = Path("/data/data")
 IMAGE_EXTENSIONS: Final[set[str]] = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff"}
 QUESTIONS_PER_SESSION: Final[int] = 20
+HUMAN_DATASET: Final[int] = 2
+ALTERED_DATASETS: Final[tuple[int, ...]] = (1, 3, 4)
 logger = logging.getLogger(__name__)
 
 
@@ -15,7 +17,7 @@ def _scan_category_files(category: int) -> list[str]:
     """Return category image paths relative to the category folder.
 
     Args:
-        category: Category folder number (1 or 2).
+        category: Dataset folder number.
 
     Returns:
         A sorted list of POSIX relative paths for image files.
@@ -42,57 +44,76 @@ def _scan_category_files(category: int) -> list[str]:
     return rel_paths
 
 
-def _filter_category_one_against_two(category_one_paths: list[str], category_two_paths: list[str]) -> list[str]:
-    """Keep category 1 images only when the filename also exists in category 2.
+def _build_altered_options_by_filename(human_paths: list[str]) -> dict[str, list[str]]:
+    """Build altered image options grouped by filename.
 
     Args:
-        category_one_paths: Relative image paths from category 1.
-        category_two_paths: Relative image paths from category 2.
+        human_paths: Relative image paths from human dataset 2.
 
     Returns:
-        Filtered category 1 paths with existing filename matches in category 2.
+        A mapping from filename to altered image API paths from datasets 1/3/4.
+        Only filenames that exist in dataset 2 are included.
     """
-    category_two_names = {Path(path).name for path in category_two_paths}
-    return [path for path in category_one_paths if Path(path).name in category_two_names]
+    human_names = {Path(path).name for path in human_paths}
+    altered_options_by_filename: dict[str, list[str]] = {}
+
+    for altered_dataset in ALTERED_DATASETS:
+        altered_paths = _scan_category_files(altered_dataset)
+        matched_count = 0
+        dropped_count = 0
+
+        for rel_path in altered_paths:
+            filename = Path(rel_path).name
+            if filename not in human_names:
+                dropped_count += 1
+                continue
+
+            altered_options_by_filename.setdefault(filename, []).append(f"{altered_dataset}/{rel_path}")
+            matched_count += 1
+
+        if dropped_count > 0:
+            logger.warning(
+                "Dropped %s altered images from /data/data/%s because matching filenames were not found in /data/data/2",
+                dropped_count,
+                altered_dataset,
+            )
+
+        logger.info(
+            "Prepared altered dataset %s: matched=%s dropped=%s",
+            altered_dataset,
+            matched_count,
+            dropped_count,
+        )
+
+    return altered_options_by_filename
 
 
-def scan_images() -> list[dict]:
-    """Scan available images and apply category matching constraints.
+def scan_images() -> dict[str, list]:
+    """Build image pools for human and altered question selection.
 
     Args:
         None.
 
     Returns:
-        A list of image descriptors with API-ready paths and categories.
+        A dictionary with two pools:
+        - "human_paths": list of API paths in dataset 2.
+        - "altered_options": list of altered path option lists (from datasets 1/3/4) per filename.
     """
-    images: list[dict] = []
-
-    category_one_paths = _scan_category_files(1)
-    category_two_paths = _scan_category_files(2)
-
-    filtered_category_one = _filter_category_one_against_two(category_one_paths, category_two_paths)
-
-    dropped_category_one = len(category_one_paths) - len(filtered_category_one)
-    if dropped_category_one > 0:
-        logger.warning(
-            "Dropped %s category-1 images because matching filenames were not found in /data/data/2",
-            dropped_category_one,
-        )
-
-    for rel_path in filtered_category_one:
-        images.append({"path": f"1/{rel_path}", "category": 1})
-
-    for rel_path in category_two_paths:
-        images.append({"path": f"2/{rel_path}", "category": 2})
+    human_rel_paths = _scan_category_files(HUMAN_DATASET)
+    human_api_paths = [f"{HUMAN_DATASET}/{path}" for path in human_rel_paths]
+    altered_by_filename = _build_altered_options_by_filename(human_rel_paths)
+    altered_options = list(altered_by_filename.values())
 
     logger.info(
-        "Prepared image pool: category1=%s (matched), category2=%s, total=%s",
-        len(filtered_category_one),
-        len(category_two_paths),
-        len(images),
+        "Prepared pools: human=%s altered_filenames=%s",
+        len(human_api_paths),
+        len(altered_options),
     )
 
-    return images
+    return {
+        "human_paths": human_api_paths,
+        "altered_options": altered_options,
+    }
 
 
 def pick_questions(count: int = QUESTIONS_PER_SESSION) -> list[dict]:
@@ -104,15 +125,34 @@ def pick_questions(count: int = QUESTIONS_PER_SESSION) -> list[dict]:
     Returns:
         A list of selected question dictionaries.
     """
-    images = scan_images()
-    if not images:
+    pools = scan_images()
+    human_paths: list[str] = pools["human_paths"]
+    altered_options: list[list[str]] = pools["altered_options"]
+
+    if not human_paths and not altered_options:
         logger.error(
             "No selectable images were found in /data/data. Falling back to blue placeholder questions. "
-            "Check /data/data/1 and /data/data/2 contents and matching filenames."
+            "Check /data/data/1, /data/data/3, /data/data/4 and /data/data/2 contents and matching filenames."
         )
         return [
             {"path": f"placeholder/{i}", "category": random.randint(1, 2), "is_placeholder": True}
             for i in range(count)
         ]
-    selected = random.choices(images, k=count) if len(images) < count else random.sample(images, count)
-    return [{"path": img["path"], "category": img["category"], "is_placeholder": False} for img in selected]
+
+    questions: list[dict] = []
+    for _ in range(count):
+        pick_altered = False
+        if altered_options and human_paths:
+            pick_altered = random.choice([True, False])
+        elif altered_options:
+            pick_altered = True
+
+        if pick_altered:
+            altered_paths_for_filename = random.choice(altered_options)
+            selected_path = random.choice(altered_paths_for_filename)
+            questions.append({"path": selected_path, "category": 1, "is_placeholder": False})
+        else:
+            selected_path = random.choice(human_paths)
+            questions.append({"path": selected_path, "category": 2, "is_placeholder": False})
+
+    return questions
