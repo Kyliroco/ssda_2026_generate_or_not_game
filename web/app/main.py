@@ -2,7 +2,7 @@
 
 import os
 from contextlib import asynccontextmanager
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Final
 
 import psycopg
@@ -59,16 +59,61 @@ def health() -> dict[str, str]:
     return {"app": "up", "db": db_status}
 
 
-@app.get("/api/images/{category}/{filename}")
-def serve_image(category: int, filename: str) -> FileResponse:
+def _is_safe_relative_path(path_value: str) -> bool:
+    """Validate an image relative path.
+
+    Args:
+        path_value: Relative path provided by the client.
+
+    Returns:
+        True when the path is safe to use, otherwise False.
+    """
+    posix_path = PurePosixPath(path_value)
+    if path_value.startswith("/"):
+        return False
+    if not posix_path.parts:
+        return False
+
+    for part in posix_path.parts:
+        if part in {".", ".."}:
+            return False
+        if not all(char in _SAFE_CHARS for char in part):
+            return False
+    return True
+
+
+@app.get(
+    "/api/images/{category}/{file_path:path}",
+    responses={
+        400: {"description": "Invalid filename"},
+        404: {"description": "Category not found or image not found"},
+    },
+)
+def serve_image(category: int, file_path: str) -> FileResponse:
+    """Serve one image file from a category folder.
+
+    Args:
+        category: Image category (1 or 2).
+        file_path: Relative file path under the category folder.
+
+    Returns:
+        The requested image file response.
+    """
     if category not in (1, 2):
         raise HTTPException(status_code=404, detail="Category not found")
-    if not all(c in _SAFE_CHARS for c in filename):
+    if not _is_safe_relative_path(file_path):
         raise HTTPException(status_code=400, detail="Invalid filename")
-    path = os.path.join(DATA_DIR, str(category), filename)
-    if not os.path.isfile(path):
+
+    category_dir = Path(DATA_DIR) / str(category)
+    path = (category_dir / file_path).resolve()
+    try:
+        path.relative_to(category_dir.resolve())
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="Invalid filename") from error
+
+    if not path.is_file():
         raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(path)
+    return FileResponse(str(path))
 
 
 @app.get("/", response_class=HTMLResponse)
