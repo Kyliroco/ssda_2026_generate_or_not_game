@@ -148,69 +148,76 @@ def get_sessions() -> list[dict]:
 @router.get("/confusion")
 def get_confusion() -> dict:
     with get_db() as conn:
-        overall_rows = conn.execute("""
+        rows = conn.execute("""
             SELECT
-              CASE WHEN sq.correct_category IN (1, 3, 4) THEN 1 ELSE 2 END AS grouped_correct,
-              sq.user_answer,
-              COUNT(*) AS n
+                sq.session_id,
+                CASE
+                    WHEN split_part(sq.image_path, '/', 1) IN ('1', '2', '3', '4')
+                        THEN split_part(sq.image_path, '/', 1)::int
+                    ELSE sq.correct_category
+                END AS effective_category,
+                sq.user_answer
             FROM session_questions sq
             JOIN game_sessions gs ON gs.id = sq.session_id
             WHERE sq.answered_at IS NOT NULL
-              AND sq.user_answer IS NOT NULL
-              AND sq.correct_category IN (1, 2, 3, 4)
-              AND sq.user_answer     IN (1, 2)
+              AND sq.user_answer IN (1, 2)
               AND gs.finished_at IS NOT NULL
-            GROUP BY grouped_correct, sq.user_answer
         """).fetchall()
 
-        per_model: list[dict] = []
-        for model_id, model_name in _AI_MODELS.items():
-            rows = conn.execute("""
-                SELECT sq.correct_category, sq.user_answer, COUNT(*) AS n
-                FROM session_questions sq
-                JOIN game_sessions gs ON gs.id = sq.session_id
-                WHERE sq.answered_at IS NOT NULL
-                  AND sq.user_answer IS NOT NULL
-                  AND sq.correct_category IN (%s, %s)
-                  AND sq.user_answer IN (1, 2)
-                  AND gs.finished_at IS NOT NULL
-                GROUP BY sq.correct_category, sq.user_answer
-            """, (model_id, _HUMAN_CATEGORY)).fetchall()
-
-            model_matrix: dict[tuple[int, int], int] = {
-                (model_id, 1): 0,
-                (model_id, 2): 0,
-                (_HUMAN_CATEGORY, 1): 0,
-                (_HUMAN_CATEGORY, 2): 0,
-            }
-            for row in rows:
-                model_matrix[(row[0], row[1])] = row[2]
-
-            model_payload = _build_confusion_payload(
-                tp=model_matrix[(model_id, 1)],
-                fn=model_matrix[(model_id, 2)],
-                fp=model_matrix[(_HUMAN_CATEGORY, 1)],
-                tn=model_matrix[(_HUMAN_CATEGORY, 2)],
-            )
-            model_payload["model_id"] = model_id
-            model_payload["model_name"] = model_name
-            per_model.append(model_payload)
-
-    overall_matrix: dict[tuple[int, int], int] = {
+    overall_counts: dict[tuple[int, int], int] = {
         (1, 1): 0,
         (1, 2): 0,
         (2, 1): 0,
         (2, 2): 0,
+        (3, 1): 0,
+        (3, 2): 0,
+        (4, 1): 0,
+        (4, 2): 0,
     }
-    for row in overall_rows:
-        overall_matrix[(row[0], row[1])] = row[2]
+    model_sessions: dict[int, set[int]] = {model_id: set() for model_id in _AI_MODELS}
 
+    for session_id, effective_category, user_answer in rows:
+        key = (effective_category, user_answer)
+        if key in overall_counts:
+            overall_counts[key] += 1
+        if effective_category in model_sessions:
+            model_sessions[effective_category].add(session_id)
+
+    ai_tp = sum(overall_counts[(model_id, 1)] for model_id in _AI_MODELS)
+    ai_fn = sum(overall_counts[(model_id, 2)] for model_id in _AI_MODELS)
     overall_payload = _build_confusion_payload(
-        tp=overall_matrix[(1, 1)],
-        fn=overall_matrix[(1, 2)],
-        fp=overall_matrix[(2, 1)],
-        tn=overall_matrix[(2, 2)],
+        tp=ai_tp,
+        fn=ai_fn,
+        fp=overall_counts[(_HUMAN_CATEGORY, 1)],
+        tn=overall_counts[(_HUMAN_CATEGORY, 2)],
     )
+
+    per_model: list[dict] = []
+    for model_id, model_name in _AI_MODELS.items():
+        model_counts: dict[tuple[int, int], int] = {
+            (model_id, 1): 0,
+            (model_id, 2): 0,
+            (_HUMAN_CATEGORY, 1): 0,
+            (_HUMAN_CATEGORY, 2): 0,
+        }
+        relevant_sessions = model_sessions[model_id]
+
+        for session_id, effective_category, user_answer in rows:
+            if session_id not in relevant_sessions:
+                continue
+            key = (effective_category, user_answer)
+            if key in model_counts:
+                model_counts[key] += 1
+
+        model_payload = _build_confusion_payload(
+            tp=model_counts[(model_id, 1)],
+            fn=model_counts[(model_id, 2)],
+            fp=model_counts[(_HUMAN_CATEGORY, 1)],
+            tn=model_counts[(_HUMAN_CATEGORY, 2)],
+        )
+        model_payload["model_id"] = model_id
+        model_payload["model_name"] = model_name
+        per_model.append(model_payload)
 
     return {
         "total": overall_payload["total"],
@@ -231,7 +238,11 @@ def get_questions() -> list[dict]:
                 sq.question_order,
                 sq.image_path,
                 sq.submitted_image_path,
-                sq.correct_category,
+                CASE
+                    WHEN split_part(sq.image_path, '/', 1) IN ('1', '2', '3', '4')
+                        THEN split_part(sq.image_path, '/', 1)::int
+                    ELSE sq.correct_category
+                END AS effective_category,
                 sq.user_answer,
                 sq.is_correct,
                 sq.answered_at
