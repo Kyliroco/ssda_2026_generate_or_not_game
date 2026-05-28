@@ -17,7 +17,7 @@ from .routers import leaderboard, players, sessions
 APP_TITLE: Final[str] = "Generate or Not"
 DATABASE_URL_KEY: Final[str] = "DATABASE_URL"
 STATIC_DIR: Path = Path(__file__).parent / "static"
-DATA_DIR: Final[str] = "/data"
+DATA_DIR: Final[str] = "/data/data"
 logger = logging.getLogger(__name__)
 
 _SAFE_CHARS = frozenset(

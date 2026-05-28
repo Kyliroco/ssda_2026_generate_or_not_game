@@ -5,7 +5,7 @@ import random
 from pathlib import Path
 from typing import Final
 
-DATA_DIR: Final[Path] = Path("/data")
+DATA_DIR: Final[Path] = Path("/data/data")
 IMAGE_EXTENSIONS: Final[set[str]] = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff"}
 QUESTIONS_PER_SESSION: Final[int] = 20
 logger = logging.getLogger(__name__)
@@ -75,7 +75,7 @@ def scan_images() -> list[dict]:
     dropped_category_one = len(category_one_paths) - len(filtered_category_one)
     if dropped_category_one > 0:
         logger.warning(
-            "Dropped %s category-1 images because matching filenames were not found in /data/2",
+            "Dropped %s category-1 images because matching filenames were not found in /data/data/2",
             dropped_category_one,
         )
 
@@ -107,8 +107,8 @@ def pick_questions(count: int = QUESTIONS_PER_SESSION) -> list[dict]:
     images = scan_images()
     if not images:
         logger.error(
-            "No selectable images were found in /data. Falling back to blue placeholder questions. "
-            "Check /data/1 and /data/2 contents and matching filenames."
+            "No selectable images were found in /data/data. Falling back to blue placeholder questions. "
+            "Check /data/data/1 and /data/data/2 contents and matching filenames."
         )
         return [
             {"path": f"placeholder/{i}", "category": random.randint(1, 2), "is_placeholder": True}
