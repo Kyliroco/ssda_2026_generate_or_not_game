@@ -403,6 +403,7 @@ const App = (() => {
       const res = await api("POST", `/api/sessions/${S.sessionId}/answer`, {
         question_order: S.order,
         answer: choice,
+        image_path: S.question.image_path,
       });
 
       if (res.is_correct) S.score++;

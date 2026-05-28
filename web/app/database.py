@@ -31,17 +31,24 @@ CREATE TABLE IF NOT EXISTS game_sessions (
 
 _DDL_QUESTIONS = """
 CREATE TABLE IF NOT EXISTS session_questions (
-    id               SERIAL PRIMARY KEY,
-    session_id       INTEGER      NOT NULL REFERENCES game_sessions(id),
-    question_order   INTEGER      NOT NULL,
-    image_path       VARCHAR(500) NOT NULL,
-    correct_category INTEGER      NOT NULL,
-    is_placeholder   BOOLEAN      NOT NULL DEFAULT FALSE,
-    user_answer      INTEGER,
-    is_correct       BOOLEAN,
-    answered_at      TIMESTAMPTZ,
+    id                   SERIAL PRIMARY KEY,
+    session_id           INTEGER      NOT NULL REFERENCES game_sessions(id),
+    question_order       INTEGER      NOT NULL,
+    image_path           VARCHAR(500) NOT NULL,
+    correct_category     INTEGER      NOT NULL,
+    is_placeholder       BOOLEAN      NOT NULL DEFAULT FALSE,
+    user_answer          INTEGER,
+    is_correct           BOOLEAN,
+    answered_at          TIMESTAMPTZ,
+    submitted_image_path VARCHAR(500),
     UNIQUE (session_id, question_order)
 )
+"""
+
+# Migration for existing installs — safe to run repeatedly
+_MIGRATE_SUBMITTED_PATH = """
+ALTER TABLE session_questions
+    ADD COLUMN IF NOT EXISTS submitted_image_path VARCHAR(500)
 """
 
 
@@ -67,3 +74,4 @@ def init_db() -> None:
         conn.execute(_DDL_PLAYERS)
         conn.execute(_DDL_SESSIONS)
         conn.execute(_DDL_QUESTIONS)
+        conn.execute(_MIGRATE_SUBMITTED_PATH)

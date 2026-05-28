@@ -58,7 +58,8 @@ def start_session(data: SessionStart) -> dict:
 
 class AnswerSubmit(BaseModel):
     question_order: int
-    answer: int  # 1 = synthetic/AI, 2 = human
+    answer: int        # 1 = synthetic/AI, 2 = human
+    image_path: str    # path of the image displayed when the answer was submitted
 
 
 @router.post("/{session_id}/answer")
@@ -90,9 +91,10 @@ def submit_answer(session_id: int, data: AnswerSubmit) -> dict:
 
         conn.execute(
             "UPDATE session_questions"
-            " SET user_answer = %s, is_correct = %s, answered_at = NOW()"
+            " SET user_answer = %s, is_correct = %s, answered_at = NOW(),"
+            "     submitted_image_path = %s"
             " WHERE id = %s",
-            (data.answer, is_correct, question[0]),
+            (data.answer, is_correct, data.image_path, question[0]),
         )
 
         answered_count: int = conn.execute(
