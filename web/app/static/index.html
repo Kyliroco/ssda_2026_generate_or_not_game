@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generate or Not</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -131,6 +131,15 @@
 
     .real-img { width: 100%; height: 100%; object-fit: cover; display: none; }
 
+    .img-reason {
+      margin-bottom: .9rem;
+      text-align: center;
+      font-size: .84rem;
+      color: #1e3a8a;
+      display: none;
+      line-height: 1.35;
+    }
+
     /* ── Answer buttons ──────────────────────────────── */
     .answer-hint { text-align: center; font-size: .9rem; color: var(--muted); margin-bottom: .9rem; }
     .answer-row  { display: flex; gap: .7rem; }
@@ -246,6 +255,7 @@
       <div class="blue-circle" id="placeholder"></div>
       <img class="real-img" id="real-img" alt="Handwriting sample">
     </div>
+    <p class="img-reason" id="img-reason"></p>
 
     <p class="answer-hint">Is this text &hellip;</p>
     <div class="answer-row" id="answer-row">
@@ -301,7 +311,11 @@ const App = (() => {
       el.classList.toggle("active", on);
       if (on) {
         const card = el.querySelector(".card");
-        if (card) { card.style.animation = "none"; void card.offsetWidth; card.style.animation = ""; }
+        if (card) {
+          card.style.animation = "none";
+          card.getBoundingClientRect();
+          card.style.animation = "";
+        }
       }
     });
   }
@@ -379,15 +393,38 @@ const App = (() => {
     document.getElementById("q-label").textContent = `Question ${q.order} / ${S.total}`;
     document.getElementById("prog").style.width    = `${((q.order - 1) / S.total) * 100}%`;
 
-    const ph  = document.getElementById("placeholder");
-    const img = document.getElementById("real-img");
-    if (q.is_placeholder) {
-      ph.style.display  = "block";
+    const ph       = document.getElementById("placeholder");
+    const img      = document.getElementById("real-img");
+    const reasonEl = document.getElementById("img-reason");
+
+    const showPlaceholder = (reason) => {
+      ph.style.display = "block";
       img.style.display = "none";
+      reasonEl.textContent = reason;
+      reasonEl.style.display = reason ? "block" : "none";
+    };
+
+    if (q.is_placeholder) {
+      img.removeAttribute("src");
+      showPlaceholder("No valid image file was found in /data. Placeholder is shown.");
     } else {
-      ph.style.display  = "none";
-      img.src            = `/api/images/${q.image_path}`;
-      img.style.display  = "block";
+      reasonEl.style.display = "none";
+      ph.style.display = "none";
+      img.style.display = "none";
+
+      img.onload = () => {
+        ph.style.display = "none";
+        reasonEl.style.display = "none";
+        img.style.display = "block";
+      };
+
+      img.onerror = () => {
+        const reason = `Image file not found on server: ${q.image_path}. Placeholder is shown.`;
+        console.warn(reason);
+        showPlaceholder(reason);
+      };
+
+      img.src = `/api/images/${q.image_path}`;
     }
 
     setAnswerBtns(false);
@@ -464,8 +501,18 @@ const App = (() => {
     }
     const html = rows.map((r, i) => {
       const me = S.player && r.player_id === S.player.id && r.best_score === currentScore;
-      const rankMark = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${r.rank}`;
-      const rankCls  = i === 0 ? "g"  : i === 1 ? "s"  : i === 2 ? "b"  : "";
+      let rankMark = `#${r.rank}`;
+      let rankCls = "";
+      if (i === 0) {
+        rankMark = "🥇";
+        rankCls = "g";
+      } else if (i === 1) {
+        rankMark = "🥈";
+        rankCls = "s";
+      } else if (i === 2) {
+        rankMark = "🥉";
+        rankCls = "b";
+      }
       return `<div class="lb-row${me ? " me" : ""}">
         <div class="lb-rank ${rankCls}">${rankMark}</div>
         <div class="lb-name">${esc(r.name)}${me ? ' <span style="color:var(--accent);font-size:.78rem">(you)</span>' : ""}</div>
@@ -492,7 +539,11 @@ const App = (() => {
   }
 
   function esc(s) {
-    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    return s
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll("\"", "&quot;");
   }
 
   return { goWelcome, goRegister, startGame, answer, playAgain, changePlayer };

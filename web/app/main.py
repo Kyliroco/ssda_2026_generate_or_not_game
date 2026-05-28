@@ -1,5 +1,6 @@
 """Generate or Not — game web application."""
 
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path, PurePosixPath
@@ -17,6 +18,7 @@ APP_TITLE: Final[str] = "Generate or Not"
 DATABASE_URL_KEY: Final[str] = "DATABASE_URL"
 STATIC_DIR: Path = Path(__file__).parent / "static"
 DATA_DIR: Final[str] = "/data"
+logger = logging.getLogger(__name__)
 
 _SAFE_CHARS = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- ()"
@@ -100,8 +102,10 @@ def serve_image(category: int, file_path: str) -> FileResponse:
         The requested image file response.
     """
     if category not in (1, 2):
+        logger.warning("Image request rejected: unknown category=%s path=%s", category, file_path)
         raise HTTPException(status_code=404, detail="Category not found")
     if not _is_safe_relative_path(file_path):
+        logger.warning("Image request rejected: invalid relative path category=%s path=%s", category, file_path)
         raise HTTPException(status_code=400, detail="Invalid filename")
 
     category_dir = Path(DATA_DIR) / str(category)
@@ -109,10 +113,23 @@ def serve_image(category: int, file_path: str) -> FileResponse:
     try:
         path.relative_to(category_dir.resolve())
     except ValueError as error:
+        logger.warning(
+            "Image request rejected: path traversal attempt category=%s path=%s",
+            category,
+            file_path,
+        )
         raise HTTPException(status_code=400, detail="Invalid filename") from error
 
     if not path.is_file():
+        logger.error(
+            "Image file not found. category=%s requested=%s resolved=%s",
+            category,
+            file_path,
+            path,
+        )
         raise HTTPException(status_code=404, detail="Image not found")
+
+    logger.info("Serving image. category=%s path=%s", category, file_path)
     return FileResponse(str(path))
 
 

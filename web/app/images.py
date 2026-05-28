@@ -1,5 +1,6 @@
 """Image scanning and random question selection."""
 
+import logging
 import random
 from pathlib import Path
 from typing import Final
@@ -7,6 +8,7 @@ from typing import Final
 DATA_DIR: Final[Path] = Path("/data")
 IMAGE_EXTENSIONS: Final[set[str]] = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff"}
 QUESTIONS_PER_SESSION: Final[int] = 20
+logger = logging.getLogger(__name__)
 
 
 def _scan_category_files(category: int) -> list[str]:
@@ -20,6 +22,7 @@ def _scan_category_files(category: int) -> list[str]:
     """
     category_dir = DATA_DIR / str(category)
     if not category_dir.is_dir():
+        logger.warning("Image directory missing: %s", category_dir)
         return []
 
     rel_paths: list[str] = []
@@ -29,6 +32,13 @@ def _scan_category_files(category: int) -> list[str]:
         if file_path.suffix.lower() not in IMAGE_EXTENSIONS:
             continue
         rel_paths.append(file_path.relative_to(category_dir).as_posix())
+
+    logger.info(
+        "Scanned category %s in %s, found %s eligible image files",
+        category,
+        category_dir,
+        len(rel_paths),
+    )
     return rel_paths
 
 
@@ -62,11 +72,25 @@ def scan_images() -> list[dict]:
 
     filtered_category_one = _filter_category_one_against_two(category_one_paths, category_two_paths)
 
+    dropped_category_one = len(category_one_paths) - len(filtered_category_one)
+    if dropped_category_one > 0:
+        logger.warning(
+            "Dropped %s category-1 images because matching filenames were not found in /data/2",
+            dropped_category_one,
+        )
+
     for rel_path in filtered_category_one:
         images.append({"path": f"1/{rel_path}", "category": 1})
 
     for rel_path in category_two_paths:
         images.append({"path": f"2/{rel_path}", "category": 2})
+
+    logger.info(
+        "Prepared image pool: category1=%s (matched), category2=%s, total=%s",
+        len(filtered_category_one),
+        len(category_two_paths),
+        len(images),
+    )
 
     return images
 
@@ -82,6 +106,10 @@ def pick_questions(count: int = QUESTIONS_PER_SESSION) -> list[dict]:
     """
     images = scan_images()
     if not images:
+        logger.error(
+            "No selectable images were found in /data. Falling back to blue placeholder questions. "
+            "Check /data/1 and /data/2 contents and matching filenames."
+        )
         return [
             {"path": f"placeholder/{i}", "category": random.randint(1, 2), "is_placeholder": True}
             for i in range(count)
