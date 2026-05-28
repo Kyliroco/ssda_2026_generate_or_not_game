@@ -91,6 +91,7 @@ The repository includes a GitHub Actions workflow at `.github/workflows/ci-cd.ym
 For every push and pull request, GitHub runners will:
 
 - Build the web Docker image.
+- Start a temporary PostgreSQL test container.
 - Run a container from that image.
 - Check `/` and `/health`.
 

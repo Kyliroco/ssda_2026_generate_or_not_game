@@ -27,14 +27,41 @@ jobs:
       - name: Build web image for tests
         run: docker build -t web-test:${{ github.sha }} ./web
 
+      - name: Create test network
+        run: docker network create web-test-net
+
+      - name: Start PostgreSQL test container
+        run: |
+          set -euo pipefail
+          docker run -d \
+            --name db-test \
+            --network web-test-net \
+            -e POSTGRES_DB=generate_or_not \
+            -e POSTGRES_USER=game_user \
+            -e POSTGRES_PASSWORD=change_me_now \
+            postgres:16-alpine
+
+      - name: Wait for PostgreSQL readiness
+        run: |
+          set -euo pipefail
+          for _ in {1..30}; do
+            if docker exec db-test pg_isready -U game_user -d generate_or_not >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "PostgreSQL did not become ready in time."
+          exit 1
+
       - name: Start test container from image
         run: |
           set -euo pipefail
           docker run -d \
             --name web-test \
+            --network web-test-net \
             -p 6767:6767 \
             -e APP_PORT=6767 \
-            -e DATABASE_URL=postgresql://game_user:change_me_now@invalid-host:5432/generate_or_not \
+            -e DATABASE_URL=postgresql://game_user:change_me_now@db-test:5432/generate_or_not \
             web-test:${{ github.sha }}
 
       - name: Check image endpoints
@@ -55,15 +82,20 @@ jobs:
 
       - name: Show container status
         if: always()
-        run: docker ps -a --filter name=web-test
+        run: docker ps -a --filter name=web-test --filter name=db-test
 
       - name: Show logs on failure
         if: failure()
-        run: docker logs web-test
+        run: |
+          docker logs web-test || true
+          docker logs db-test || true
 
-      - name: Cleanup test container
+      - name: Cleanup test resources
         if: always()
-        run: docker rm -f web-test || true
+        run: |
+          docker rm -f web-test || true
+          docker rm -f db-test || true
+          docker network rm web-test-net || true
 
   publish-dockerhub:
     name: Publish Web Image to Docker Hub
