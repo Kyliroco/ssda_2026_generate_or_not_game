@@ -96,11 +96,15 @@ def get_sessions() -> list[dict]:
 def get_confusion() -> dict:
     with get_db() as conn:
         rows = conn.execute("""
-            SELECT correct_category, user_answer, COUNT(*) AS n
-            FROM session_questions
-            WHERE answered_at IS NOT NULL AND user_answer IS NOT NULL
-              AND correct_category IN (1, 2) AND user_answer IN (1, 2)
-            GROUP BY correct_category, user_answer
+            SELECT sq.correct_category, sq.user_answer, COUNT(*) AS n
+            FROM session_questions sq
+            JOIN game_sessions gs ON gs.id = sq.session_id
+            WHERE sq.answered_at IS NOT NULL
+              AND sq.user_answer IS NOT NULL
+              AND sq.correct_category IN (1, 2)
+              AND sq.user_answer     IN (1, 2)
+              AND gs.finished_at IS NOT NULL
+            GROUP BY sq.correct_category, sq.user_answer
         """).fetchall()
 
     m: dict[tuple[int, int], int] = {(1, 1): 0, (1, 2): 0, (2, 1): 0, (2, 2): 0}
