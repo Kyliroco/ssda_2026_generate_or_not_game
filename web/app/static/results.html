@@ -97,7 +97,6 @@
       letter-spacing: .08em; color: var(--muted); width: 16px;
     }
     .cm-grid { display: grid; grid-template-columns: 72px 1fr 1fr; gap: 5px; }
-    .cm-spacer { }
     .cm-col-hdr {
       text-align: center; font-size: .78rem; font-weight: 800;
       padding: .35rem .5rem; color: var(--text);
@@ -292,7 +291,7 @@
 
 </div>
 <!-- Clear DB modal -->
-<div class="modal-overlay" id="clear-modal" onclick="Admin.closeClear(event)">
+<div class="modal-overlay" id="clear-modal">
   <div class="modal-card">
     <div class="modal-title">🗑 Clear all data</div>
     <p class="modal-sub">This will permanently delete all players, sessions and answers. Enter the admin password to confirm.</p>
@@ -316,10 +315,23 @@ const Admin = (() => {
 
   // ── Bootstrap ────────────────────────────────────────
   async function init() {
+    setupClearModal();
     await Promise.all(["stats","confusion","players","sessions","questions"].map(load));
     renderStats();
     renderConfusion();
     renderTable();
+  }
+
+  function setupClearModal() {
+    const modal = document.getElementById("clear-modal");
+    if (modal.dataset.bound === "1") return;
+
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        closeClear();
+      }
+    });
+    modal.dataset.bound = "1";
   }
 
   async function refresh() {
@@ -344,12 +356,16 @@ const Admin = (() => {
     const s = D.stats || {};
     const correctPct = s.total_answers
       ? Math.round((s.correct_answers / s.total_answers) * 100) : null;
+    const finishedSessionsText = s.finished_sessions == null ? "" : `${s.finished_sessions} finished`;
+    const avgScoreText = s.avg_pct == null ? "—" : `${s.avg_pct}%`;
+    const correctRateText = correctPct == null ? "—" : `${correctPct}%`;
+    const answersText = s.total_answers == null ? "" : `${s.correct_answers}/${s.total_answers} answers`;
+
     document.getElementById("stats-row").innerHTML =
       statCard("👤", s.total_players ?? "—", "Players") +
-      statCard("🎮", s.total_sessions ?? "—", "Sessions", s.finished_sessions != null ? `${s.finished_sessions} finished` : "") +
-      statCard("📊", s.avg_pct != null ? s.avg_pct + "%" : "—", "Avg Score") +
-      statCard("✅", correctPct != null ? correctPct + "%" : "—", "Correct Rate",
-               s.total_answers != null ? `${s.correct_answers}/${s.total_answers} answers` : "");
+      statCard("🎮", s.total_sessions ?? "—", "Sessions", finishedSessionsText) +
+      statCard("📊", avgScoreText, "Avg Score") +
+      statCard("✅", correctRateText, "Correct Rate", answersText);
   }
 
   function statCard(icon, val, label, sub = "") {
@@ -364,9 +380,34 @@ const Admin = (() => {
   // ── Confusion matrix ──────────────────────────────────
   function renderConfusion() {
     const c = D.confusion || {};
-    const m = c.matrix || {};
-    const met = c.metrics || {};
-    const N = c.total || 0;
+    const overall = c.overall || {
+      total: c.total || 0,
+      matrix: c.matrix || {},
+      metrics: c.metrics || {},
+    };
+    const byModel = Array.isArray(c.by_model) ? c.by_model : [];
+
+    const sections = [];
+    sections.push(renderConfusionSection("🎯 Overall Confusion Matrix", overall, "AI"));
+    byModel.forEach((modelConf) => {
+      sections.push(
+        renderConfusionSection(
+          `🧠 ${modelConf.model_name} Confusion Matrix`,
+          modelConf,
+          modelConf.model_name,
+        ),
+      );
+    });
+
+    document.getElementById("cm-card").innerHTML = sections.join(
+      '<div style="height:1px;background:var(--border);margin:1.2rem 0"></div>',
+    );
+  }
+
+  function renderConfusionSection(title, conf, positiveLabel) {
+    const m = conf.matrix || {};
+    const met = conf.metrics || {};
+    const N = conf.total || 0;
 
     function pctOf(n) { return N ? (n / N * 100).toFixed(1) + "%" : "—"; }
 
@@ -379,68 +420,67 @@ const Admin = (() => {
       </div>`;
     }
 
-    function metColor(val) {
-      if (val == null) return "";
-      return val >= 70 ? "good" : val >= 50 ? "warn" : "bad";
-    }
-
-    function metCard(val, label, desc) {
-      const display = val != null ? val + "%" : "—";
-      return `<div class="cm-met ${metColor(val)}">
-        <div class="cm-met-val">${display}</div>
-        <div class="cm-met-lbl">${label}</div>
-        <div class="cm-met-desc">${desc}</div>
+    if (N === 0) {
+      return `<div>
+        <div class="cm-card-title">${title}</div>
+        <div class="empty">No answered questions yet for this matrix.</div>
       </div>`;
     }
 
-    if (N === 0) {
-      document.getElementById("cm-card").innerHTML = `
-        <div class="cm-card-title">🎯 Confusion Matrix</div>
-        <div class="empty">No answered questions yet.</div>`;
-      return;
-    }
+    return `
+      <div>
+        <div class="cm-card-title">
+          ${title}
+          <span class="cm-total">N = ${N} answers</span>
+        </div>
+        <div class="cm-layout">
 
-    document.getElementById("cm-card").innerHTML = `
-      <div class="cm-card-title">
-        🎯 Confusion Matrix
-        <span class="cm-total">N = ${N} answers</span>
-      </div>
-      <div class="cm-layout">
+          <div class="cm-matrix-wrap">
+            <div class="cm-x-label">↔ What users said</div>
+            <div class="cm-inner">
+              <div class="cm-y-label">↕ What it really is</div>
+              <div class="cm-grid">
+                <div class="cm-spacer"></div>
+                <div class="cm-col-hdr">🤖 AI</div>
+                <div class="cm-col-hdr">✍️ Human</div>
 
-        <div class="cm-matrix-wrap">
-          <div class="cm-x-label">↔ What users said</div>
-          <div class="cm-inner">
-            <div class="cm-y-label">↕ What it really is</div>
-            <div class="cm-grid">
-              <div class="cm-spacer"></div>
-              <div class="cm-col-hdr">🤖 AI</div>
-              <div class="cm-col-hdr">✍️ Human</div>
+                <div class="cm-row-hdr">🤖 ${positiveLabel}</div>
+                ${cmCell(m.ai_ai, true, "True Positive")}
+                ${cmCell(m.ai_human, false, "False Negative")}
 
-              <div class="cm-row-hdr">🤖 AI</div>
-              ${cmCell(m.ai_ai,    true,  "True Positive")}
-              ${cmCell(m.ai_human, false, "False Negative")}
-
-              <div class="cm-row-hdr">✍️ Human</div>
-              ${cmCell(m.human_ai,    false, "False Positive")}
-              ${cmCell(m.human_human, true,  "True Negative")}
+                <div class="cm-row-hdr">✍️ Human</div>
+                ${cmCell(m.human_ai, false, "False Positive")}
+                ${cmCell(m.human_human, true, "True Negative")}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="cm-metrics">
-          ${metCard(met_acc(m, N),    "Accuracy",        "Overall correct rate")}
-          ${metCard(met.recall_ai,    "AI Recall",       "AI images spotted")}
-          ${metCard(met.recall_human, "Human Recall",    "Human images spotted")}
-          ${metCard(met.precision_ai, "AI Precision",    "\"AI\" guesses that were right")}
-          ${metCard(met.f1_ai,        "F1 Score (AI)",   "Harmonic mean P/R for AI")}
-        </div>
+          <div class="cm-metrics">
+            ${metricCard(met.accuracy, "Accuracy", "Overall correct rate")}
+            ${metricCard(met.recall_ai, `${positiveLabel} Recall`, `${positiveLabel} images spotted`) }
+            ${metricCard(met.recall_human, "Human Recall", "Human images spotted")}
+            ${metricCard(met.precision_ai, `${positiveLabel} Precision`, `"${positiveLabel}" guesses that were right`) }
+            ${metricCard(met.f1_ai, `F1 Score (${positiveLabel})`, `Harmonic mean P/R for ${positiveLabel}`)}
+          </div>
 
+        </div>
       </div>`;
   }
 
-  function met_acc(m, N) {
-    if (!N) return null;
-    return parseFloat((((m.ai_ai || 0) + (m.human_human || 0)) / N * 100).toFixed(1));
+  function metricColorClass(val) {
+    if (val == null) return "";
+    if (val >= 70) return "good";
+    if (val >= 50) return "warn";
+    return "bad";
+  }
+
+  function metricCard(val, label, desc) {
+    const display = val == null ? "—" : `${val}%`;
+    return `<div class="cm-met ${metricColorClass(val)}">
+      <div class="cm-met-val">${display}</div>
+      <div class="cm-met-lbl">${label}</div>
+      <div class="cm-met-desc">${desc}</div>
+    </div>`;
   }
 
   // ── Tabs ──────────────────────────────────────────────
@@ -476,17 +516,24 @@ const Admin = (() => {
       rows.sort((a, b) => {
         const av = rawCell(a, c), bv = rawCell(b, c);
         if (av == null && bv == null) return 0;
-        if (av == null) return 1; if (bv == null) return -1;
-        return av < bv ? -sortDir : av > bv ? sortDir : 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        if (av < bv) return -sortDir;
+        if (av > bv) return sortDir;
+        return 0;
       });
     }
 
-    document.getElementById("row-count").textContent = `${rows.length} row${rows.length !== 1 ? "s" : ""}`;
+    const suffix = rows.length === 1 ? "" : "s";
+    document.getElementById("row-count").textContent = `${rows.length} row${suffix}`;
 
     if (!rows.length) { wrap.innerHTML = '<div class="empty">No data found.</div>'; return; }
 
     const thead = defs.cols.map((c, i) => {
-      const cls = sortCol === i ? (sortDir === 1 ? " asc" : " desc") : "";
+      let cls = "";
+      if (sortCol === i) {
+        cls = sortDir === 1 ? " asc" : " desc";
+      }
       return `<th class="${cls}" onclick="Admin.sortBy(${i})">${c.label}</th>`;
     }).join("");
 
@@ -511,7 +558,7 @@ const Admin = (() => {
         { label: "Registered", key: "created_at",  fmt: fmtDate },
         { label: "Sessions",   key: "session_count" },
         { label: "Best Score", key: "best_score",  fmt: (v, r) =>
-            v != null ? `<span class="badge b-blue">${v}/${r.best_total}</span>` : `<span class="badge b-gray">—</span>` },
+            v == null ? `<span class="badge b-gray">—</span>` : `<span class="badge b-blue">${v}/${r.best_total}</span>` },
       ],
     },
     sessions: {
@@ -522,16 +569,14 @@ const Admin = (() => {
         { label: "Started",  key: "started_at",  fmt: fmtDate },
         { label: "Finished", key: "finished_at", fmt: v => v ? fmtDate(v) : `<span class="badge b-orange">In progress</span>` },
         { label: "Score",    key: "score",       fmt: (v, r) =>
-            v != null
-              ? `<span class="badge ${v/r.total_questions>=.7?"b-green":v/r.total_questions>=.5?"b-blue":"b-red"}">${v}/${r.total_questions}</span>`
-              : `<span class="badge b-gray">—</span>` },
+            scoreBadge(v, r.total_questions) },
         { label: "Status",   key: "finished_at", fmt: v =>
             v ? `<span class="badge b-green">Finished</span>` : `<span class="badge b-orange">In progress</span>` },
         { label: "Duration", key: "_dur", fmt: (_, r) => r.finished_at ? fmtDur(r.started_at, r.finished_at) : "—" },
       ],
     },
     questions: {
-      rowClass: r => r.answered_at == null ? "r-pending" : r.is_correct ? "r-correct" : "r-wrong",
+      rowClass: questionRowClass,
       cols: [
         { label: "ID",             key: "id" },
         { label: "Session",        key: "session_id" },
@@ -540,10 +585,8 @@ const Admin = (() => {
         { label: "Image Path",     key: "image_path" },
         { label: "Submitted Path", key: "submitted_image_path", fmt: v => v ?? `<span style="color:var(--muted)">—</span>` },
         { label: "Correct",        key: "correct_category",     fmt: catBadge },
-        { label: "Answer",         key: "user_answer",          fmt: v => v != null ? catBadge(v) : `<span class="badge b-gray">—</span>` },
-        { label: "Result",         key: "is_correct",           fmt: v =>
-            v == null ? `<span class="badge b-gray">—</span>` :
-            v ? `<span class="badge b-green">✓ Correct</span>` : `<span class="badge b-red">✗ Wrong</span>` },
+        { label: "Answer",         key: "user_answer",          fmt: v => v == null ? `<span class="badge b-gray">—</span>` : answerBadge(v) },
+        { label: "Result",         key: "is_correct",           fmt: resultBadge },
         { label: "Answered At",    key: "answered_at", fmt: v => v ? fmtDate(v) : `<span style="color:var(--muted)">—</span>` },
       ],
     },
@@ -560,9 +603,41 @@ const Admin = (() => {
   }
 
   function catBadge(v) {
-    return v === 1
-      ? `<span class="badge b-blue">🤖 AI</span>`
-      : `<span class="badge b-green">✍️ Human</span>`;
+    if (v === 1) return `<span class="badge b-blue">🤖 DiffusionPen</span>`;
+    if (v === 3) return `<span class="badge b-blue">🤖 Higan</span>`;
+    if (v === 4) return `<span class="badge b-blue">🤖 VATR++</span>`;
+    if (v === 2) return `<span class="badge b-green">✍️ Human</span>`;
+    return `<span class="badge b-gray">—</span>`;
+  }
+
+  function answerBadge(v) {
+    if (v === 1) return `<span class="badge b-blue">🤖 AI</span>`;
+    if (v === 2) return `<span class="badge b-green">✍️ Human</span>`;
+    return `<span class="badge b-gray">—</span>`;
+  }
+
+  function scoreBadge(v, totalQuestions) {
+    if (v == null) return `<span class="badge b-gray">—</span>`;
+    const ratio = v / totalQuestions;
+    let cls = "b-red";
+    if (ratio >= 0.7) {
+      cls = "b-green";
+    } else if (ratio >= 0.5) {
+      cls = "b-blue";
+    }
+    return `<span class="badge ${cls}">${v}/${totalQuestions}</span>`;
+  }
+
+  function questionRowClass(row) {
+    if (row.answered_at == null) return "r-pending";
+    if (row.is_correct) return "r-correct";
+    return "r-wrong";
+  }
+
+  function resultBadge(v) {
+    if (v == null) return `<span class="badge b-gray">—</span>`;
+    if (v) return `<span class="badge b-green">✓ Correct</span>`;
+    return `<span class="badge b-red">✗ Wrong</span>`;
   }
 
   function fmtDate(iso) {
@@ -581,7 +656,7 @@ const Admin = (() => {
   }
 
   function esc(s) {
-    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    return s.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
   }
 
   // ── Clear DB modal ────────────────────────────────────
@@ -616,7 +691,7 @@ const Admin = (() => {
         input.focus();
         return;
       }
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error("Failed to clear database");
 
       document.getElementById("clear-modal").classList.remove("open");
       await refresh();

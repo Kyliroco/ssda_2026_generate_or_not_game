@@ -7,6 +7,10 @@ from ..database import get_db
 from ..images import pick_questions
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
+AI_CATEGORIES = {1, 3, 4}
+HUMAN_CATEGORY = 2
+AI_ANSWER = 1
+HUMAN_ANSWER = 2
 
 
 def _fmt_question(row: tuple) -> dict:
@@ -22,7 +26,12 @@ class SessionStart(BaseModel):
     player_id: int
 
 
-@router.post("")
+@router.post(
+    "",
+    responses={
+        404: {"description": "Player not found"},
+    },
+)
 def start_session(data: SessionStart) -> dict:
     questions = pick_questions()
 
@@ -58,11 +67,17 @@ def start_session(data: SessionStart) -> dict:
 
 class AnswerSubmit(BaseModel):
     question_order: int
-    answer: int        # 1 = synthetic/AI, 2 = human
+    answer: int        # 1 = synthetic/AI (all models), 2 = human
     image_path: str    # path of the image displayed when the answer was submitted
 
 
-@router.post("/{session_id}/answer")
+@router.post(
+    "/{session_id}/answer",
+    responses={
+        400: {"description": "Invalid answer or session/question state"},
+        404: {"description": "Session or question not found"},
+    },
+)
 def submit_answer(session_id: int, data: AnswerSubmit) -> dict:
     if data.answer not in (1, 2):
         raise HTTPException(status_code=400, detail="Answer must be 1 (AI) or 2 (human)")
@@ -87,7 +102,9 @@ def submit_answer(session_id: int, data: AnswerSubmit) -> dict:
         if question[2] is not None:
             raise HTTPException(status_code=400, detail="Question already answered")
 
-        is_correct = data.answer == question[1]
+        correct_category = int(question[1])
+        expected_answer = AI_ANSWER if correct_category in AI_CATEGORIES else HUMAN_ANSWER
+        is_correct = data.answer == expected_answer
 
         conn.execute(
             "UPDATE session_questions"
@@ -117,7 +134,7 @@ def submit_answer(session_id: int, data: AnswerSubmit) -> dict:
 
             return {
                 "is_correct": is_correct,
-                "correct_answer": question[1],
+                "correct_answer": expected_answer,
                 "finished": True,
                 "score": score,
                 "total_questions": total,
@@ -132,7 +149,7 @@ def submit_answer(session_id: int, data: AnswerSubmit) -> dict:
 
     return {
         "is_correct": is_correct,
-        "correct_answer": question[1],
+        "correct_answer": expected_answer,
         "finished": False,
         "score": None,
         "total_questions": total,

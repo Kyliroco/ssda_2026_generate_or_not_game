@@ -211,7 +211,7 @@ def pick_questions(count: int = QUESTIONS_PER_SESSION) -> list[dict]:
         if pick_altered:
             selected_dataset = random.choice(available_altered_datasets)
             selected_path = random.choice(altered_by_dataset[selected_dataset])
-            questions.append({"path": selected_path, "category": 1, "is_placeholder": False})
+            questions.append({"path": selected_path, "category": selected_dataset, "is_placeholder": False})
         else:
             selected_path = random.choice(human_paths)
             questions.append({"path": selected_path, "category": 2, "is_placeholder": False})

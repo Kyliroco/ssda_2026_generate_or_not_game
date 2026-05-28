@@ -1,15 +1,68 @@
 """Admin endpoints for the /results dashboard."""
 
 import os
+from typing import Final
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ..database import get_db
 
-_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "SSDA26")
+_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+_HUMAN_CATEGORY: Final[int] = 2
+_AI_MODELS: Final[dict[int, str]] = {
+    1: "DiffusionPen",
+    3: "Higan",
+    4: "VATR++",
+}
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+def _pct(num: int, den: int) -> float | None:
+    """Compute a percentage value rounded to one decimal place.
+
+    Args:
+        num: Numerator.
+        den: Denominator.
+
+    Returns:
+        Rounded percentage or None when denominator is zero.
+    """
+    return round(num / den * 100, 1) if den else None
+
+
+def _build_confusion_payload(tp: int, fn: int, fp: int, tn: int) -> dict:
+    """Build confusion matrix payload with derived metrics.
+
+    Args:
+        tp: True positives.
+        fn: False negatives.
+        fp: False positives.
+        tn: True negatives.
+
+    Returns:
+        Payload containing matrix counts and metrics.
+    """
+    total = tp + fn + fp + tn
+    f1_val = round(2 * tp / (2 * tp + fp + fn) * 100, 1) if (2 * tp + fp + fn) else None
+
+    return {
+        "total": total,
+        "matrix": {
+            "ai_ai": tp,
+            "ai_human": fn,
+            "human_ai": fp,
+            "human_human": tn,
+        },
+        "metrics": {
+            "accuracy": _pct(tp + tn, total),
+            "precision_ai": _pct(tp, tp + fp),
+            "recall_ai": _pct(tp, tp + fn),
+            "recall_human": _pct(tn, tn + fp),
+            "f1_ai": f1_val,
+        },
+    }
 
 
 @router.get("/stats")
@@ -95,46 +148,76 @@ def get_sessions() -> list[dict]:
 @router.get("/confusion")
 def get_confusion() -> dict:
     with get_db() as conn:
-        rows = conn.execute("""
-            SELECT sq.correct_category, sq.user_answer, COUNT(*) AS n
+        overall_rows = conn.execute("""
+            SELECT
+              CASE WHEN sq.correct_category IN (1, 3, 4) THEN 1 ELSE 2 END AS grouped_correct,
+              sq.user_answer,
+              COUNT(*) AS n
             FROM session_questions sq
             JOIN game_sessions gs ON gs.id = sq.session_id
             WHERE sq.answered_at IS NOT NULL
               AND sq.user_answer IS NOT NULL
-              AND sq.correct_category IN (1, 2)
+              AND sq.correct_category IN (1, 2, 3, 4)
               AND sq.user_answer     IN (1, 2)
               AND gs.finished_at IS NOT NULL
-            GROUP BY sq.correct_category, sq.user_answer
+            GROUP BY grouped_correct, sq.user_answer
         """).fetchall()
 
-    m: dict[tuple[int, int], int] = {(1, 1): 0, (1, 2): 0, (2, 1): 0, (2, 2): 0}
-    for r in rows:
-        m[(r[0], r[1])] = r[2]
+        per_model: list[dict] = []
+        for model_id, model_name in _AI_MODELS.items():
+            rows = conn.execute("""
+                SELECT sq.correct_category, sq.user_answer, COUNT(*) AS n
+                FROM session_questions sq
+                JOIN game_sessions gs ON gs.id = sq.session_id
+                WHERE sq.answered_at IS NOT NULL
+                  AND sq.user_answer IS NOT NULL
+                  AND sq.correct_category IN (%s, %s)
+                  AND sq.user_answer IN (1, 2)
+                  AND gs.finished_at IS NOT NULL
+                GROUP BY sq.correct_category, sq.user_answer
+            """, (model_id, _HUMAN_CATEGORY)).fetchall()
 
-    tp = m[(1, 1)]   # AI shown   → user said AI    (correct)
-    fn = m[(1, 2)]   # AI shown   → user said Human (miss)
-    fp = m[(2, 1)]   # Human shown → user said AI   (false alarm)
-    tn = m[(2, 2)]   # Human shown → user said Human (correct)
-    total = tp + fn + fp + tn
+            model_matrix: dict[tuple[int, int], int] = {
+                (model_id, 1): 0,
+                (model_id, 2): 0,
+                (_HUMAN_CATEGORY, 1): 0,
+                (_HUMAN_CATEGORY, 2): 0,
+            }
+            for row in rows:
+                model_matrix[(row[0], row[1])] = row[2]
 
-    def pct(num: int, den: int) -> float | None:
-        return round(num / den * 100, 1) if den else None
+            model_payload = _build_confusion_payload(
+                tp=model_matrix[(model_id, 1)],
+                fn=model_matrix[(model_id, 2)],
+                fp=model_matrix[(_HUMAN_CATEGORY, 1)],
+                tn=model_matrix[(_HUMAN_CATEGORY, 2)],
+            )
+            model_payload["model_id"] = model_id
+            model_payload["model_name"] = model_name
+            per_model.append(model_payload)
 
-    precision   = pct(tp, tp + fp)
-    recall_ai   = pct(tp, tp + fn)
-    recall_hum  = pct(tn, tn + fp)
-    f1_val      = round(2 * tp / (2 * tp + fp + fn) * 100, 1) if (2 * tp + fp + fn) else None
+    overall_matrix: dict[tuple[int, int], int] = {
+        (1, 1): 0,
+        (1, 2): 0,
+        (2, 1): 0,
+        (2, 2): 0,
+    }
+    for row in overall_rows:
+        overall_matrix[(row[0], row[1])] = row[2]
+
+    overall_payload = _build_confusion_payload(
+        tp=overall_matrix[(1, 1)],
+        fn=overall_matrix[(1, 2)],
+        fp=overall_matrix[(2, 1)],
+        tn=overall_matrix[(2, 2)],
+    )
 
     return {
-        "total": total,
-        "matrix": {"ai_ai": tp, "ai_human": fn, "human_ai": fp, "human_human": tn},
-        "metrics": {
-            "accuracy":       pct(tp + tn, total),
-            "precision_ai":   precision,
-            "recall_ai":      recall_ai,
-            "recall_human":   recall_hum,
-            "f1_ai":          f1_val,
-        },
+        "total": overall_payload["total"],
+        "matrix": overall_payload["matrix"],
+        "metrics": overall_payload["metrics"],
+        "overall": overall_payload,
+        "by_model": per_model,
     }
 
 
@@ -178,9 +261,14 @@ class ClearRequest(BaseModel):
     password: str
 
 
-@router.post("/clear")
+@router.post(
+    "/clear",
+    responses={
+        403: {"description": "Invalid password"},
+    },
+)
 def clear_database(data: ClearRequest) -> dict:
-    if data.password != _ADMIN_PASSWORD:
+    if not _ADMIN_PASSWORD or data.password != _ADMIN_PASSWORD:
         raise HTTPException(status_code=403, detail="Invalid password")
     with get_db() as conn:
         conn.execute(
