@@ -79,6 +79,41 @@ To change runtime settings, edit `docker-compose.yml` directly:
 - Database user: `game_user`
 - Database password: `change_me_now`
 
+## Image Dataset Layout (/data)
+
+The app reads images from `/data` inside the container.
+
+With the current compose file, host `./data` is mounted to container `/data`.
+
+Expected folders:
+
+- `/data/1` for category 1 (AI/synthetic)
+- `/data/2` for category 2 (human/real)
+
+Important behavior:
+
+- The scan is recursive in both category folders.
+- A category 1 image is only eligible when a file with the same filename exists somewhere under `/data/2`.
+- Category 2 images are eligible when they are valid image files.
+
+Supported image extensions:
+
+- `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`, `.tiff`
+
+Example layout:
+
+```text
+/data
+  /1
+    /a01
+      a01-000u-00-01.png
+  /2
+    a01-000u-00-01.png
+    p01-147-01-03.png
+```
+
+In this example, `/data/1/a01/a01-000u-00-01.png` can be selected because `a01-000u-00-01.png` exists in `/data/2`.
+
 ## HTTPS Note
 
 This MVP serves HTTP on port `6767` inside the stack.
