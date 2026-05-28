@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from .database import init_db
-from .routers import leaderboard, players, sessions
+from .routers import admin, leaderboard, players, sessions
 
 APP_TITLE: Final[str] = "Generate or Not"
 DATABASE_URL_KEY: Final[str] = "DATABASE_URL"
@@ -34,6 +34,7 @@ app = FastAPI(title=APP_TITLE, lifespan=lifespan)
 app.include_router(players.router)
 app.include_router(sessions.router)
 app.include_router(leaderboard.router)
+app.include_router(admin.router)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
@@ -74,3 +75,8 @@ def serve_image(category: int, filename: str) -> FileResponse:
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
     return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+
+
+@app.get("/results", response_class=HTMLResponse)
+def results() -> str:
+    return (STATIC_DIR / "results.html").read_text(encoding="utf-8")
