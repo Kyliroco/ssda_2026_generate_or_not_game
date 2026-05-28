@@ -1,143 +1,76 @@
-"""Minimal web application for the Docker MVP."""
+"""Generate or Not — game web application."""
 
 import os
+from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Final
 
 import psycopg
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
-APP_TITLE: Final[str] = "Generate or Not MVP"
+from .database import init_db
+from .routers import leaderboard, players, sessions
+
+APP_TITLE: Final[str] = "Generate or Not"
 DATABASE_URL_KEY: Final[str] = "DATABASE_URL"
+STATIC_DIR: Path = Path(__file__).parent / "static"
+DATA_DIR: Final[str] = "/data"
 
-app = FastAPI(title=APP_TITLE)
+_SAFE_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- ()"
+)
 
 
-def get_database_url() -> str:
-    """Return the PostgreSQL connection URL from environment.
+@asynccontextmanager
+async def lifespan(application: FastAPI):  # noqa: ARG001
+    init_db()
+    yield
 
-    Args:
-        None.
 
-    Returns:
-        The database connection URL.
-    """
+app = FastAPI(title=APP_TITLE, lifespan=lifespan)
+
+app.include_router(players.router)
+app.include_router(sessions.router)
+app.include_router(leaderboard.router)
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+def _get_database_url() -> str:
     return os.getenv(DATABASE_URL_KEY, "")
 
 
-def is_database_reachable(database_url: str) -> bool:
-    """Check if PostgreSQL is reachable with a simple query.
-
-    Args:
-        database_url: PostgreSQL connection URL.
-
-    Returns:
-        True when the query succeeds, otherwise False.
-    """
-    if not database_url:
+def _is_database_reachable(url: str) -> bool:
+    if not url:
         return False
-
     try:
-        with psycopg.connect(database_url, connect_timeout=2) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1;")
-                cursor.fetchone()
+        with psycopg.connect(url, connect_timeout=2) as conn:
+            conn.execute("SELECT 1")
         return True
     except psycopg.Error:
         return False
 
 
-@app.get("/", response_class=HTMLResponse)
-def index() -> str:
-    """Render the landing page.
-
-    Args:
-        None.
-
-    Returns:
-        A static HTML response.
-    """
-    return """<!doctype html>
-<html lang=\"en\">
-  <head>
-    <meta charset=\"utf-8\" />
-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
-    <title>Generate or Not MVP</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --bg-start: #edf6f9;
-        --bg-end: #ffddd2;
-        --card: #ffffff;
-        --text: #14213d;
-        --accent: #e76f51;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-        background: linear-gradient(160deg, var(--bg-start), var(--bg-end));
-        display: grid;
-        place-items: center;
-        color: var(--text);
-      }
-
-      .card {
-        width: min(720px, 92vw);
-        background: var(--card);
-        border-radius: 16px;
-        box-shadow: 0 20px 40px rgba(20, 33, 61, 0.16);
-        padding: clamp(1.5rem, 2.5vw, 2rem);
-      }
-
-      h1 {
-        margin-top: 0;
-        margin-bottom: 0.6rem;
-        font-size: clamp(1.6rem, 3vw, 2.2rem);
-      }
-
-      p {
-        margin: 0.5rem 0;
-        line-height: 1.5;
-      }
-
-      .tag {
-        display: inline-block;
-        margin-top: 0.8rem;
-        padding: 0.35rem 0.65rem;
-        border-radius: 999px;
-        background: var(--accent);
-        color: #ffffff;
-        font-size: 0.9rem;
-      }
-    </style>
-  </head>
-  <body>
-    <main class=\"card\">
-      <h1>Generate or Not</h1>
-      <p>The MVP stack is running with Docker Compose.</p>
-      <p>This page is served by the web app on port 6767.</p>
-      <p class=\"tag\">Database starts empty and is internal-only</p>
-    </main>
-  </body>
-</html>
-"""
-
-
 @app.get("/health")
 def health() -> dict[str, str]:
-    """Return app and database health status.
-
-    Args:
-        None.
-
-    Returns:
-        A dictionary with app and database status values.
-    """
-    db_status = "up" if is_database_reachable(get_database_url()) else "down"
+    db_status = "up" if _is_database_reachable(_get_database_url()) else "down"
     return {"app": "up", "db": db_status}
+
+
+@app.get("/api/images/{category}/{filename}")
+def serve_image(category: int, filename: str) -> FileResponse:
+    if category not in (1, 2):
+        raise HTTPException(status_code=404, detail="Category not found")
+    if not all(c in _SAFE_CHARS for c in filename):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    path = os.path.join(DATA_DIR, str(category), filename)
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(path)
+
+
+@app.get("/", response_class=HTMLResponse)
+def index() -> str:
+    return (STATIC_DIR / "index.html").read_text(encoding="utf-8")

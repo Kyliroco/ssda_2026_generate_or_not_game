@@ -1,1 +1,7 @@
 .env
+
+# Image data — keep directory structure, ignore actual image files
+data/1/*
+data/2/*
+!data/1/.gitkeep
+!data/2/.gitkeep

@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Generate or Not</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-start: #edf6f9;
+      --bg-end:   #ffddd2;
+      --card:     #ffffff;
+      --text:     #14213d;
+      --muted:    #6b7280;
+      --border:   #e5e7eb;
+      --accent:   #e76f51;
+      --accent-h: #d4604a;
+      --ai-btn:   #6366f1;
+      --ai-btn-h: #4f46e5;
+      --hm-btn:   #059669;
+      --hm-btn-h: #047857;
+      --shadow:   0 8px 32px rgba(20,33,61,0.13);
+      --radius:   18px;
+      --tr:       0.25s ease;
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: "Segoe UI", "Trebuchet MS", system-ui, sans-serif;
+      background: linear-gradient(150deg, var(--bg-start) 0%, var(--bg-end) 100%) fixed;
+      color: var(--text);
+    }
+
+    /* ── Screens ──────────────────────────────────────── */
+    .screen {
+      display: none;
+      min-height: 100svh;
+      padding: 1rem;
+      align-items: center;
+      justify-content: center;
+    }
+    .screen.active { display: flex; flex-direction: column; }
+
+    /* ── Card ────────────────────────────────────────── */
+    .card {
+      width: 100%;
+      max-width: 540px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: clamp(1.4rem, 5vw, 2.4rem);
+      animation: slideUp .35s ease both;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Typography ──────────────────────────────────── */
+    h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); font-weight: 900; line-height: 1.15; margin-bottom: .5rem; }
+    h2 { font-size: clamp(1.3rem, 4vw, 1.7rem); font-weight: 800; margin-bottom: .75rem; }
+    .sub { color: var(--muted); line-height: 1.65; margin-bottom: 1.8rem; font-size: .97rem; }
+
+    /* ── Buttons ─────────────────────────────────────── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+      width: 100%; padding: .85rem 1.4rem;
+      border: none; border-radius: 11px;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      transition: background var(--tr), box-shadow var(--tr), transform var(--tr);
+      user-select: none; -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(.96); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+    .btn-primary  { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-h); box-shadow: 0 4px 14px rgba(231,111,81,.38); }
+
+    .btn-ghost { background: transparent; border: 2px solid var(--border); color: var(--muted); margin-top: .5rem; }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--muted); color: var(--text); }
+
+    .btn-ai    { background: var(--ai-btn); color: #fff; flex: 1; }
+    .btn-ai:hover:not(:disabled)    { background: var(--ai-btn-h); box-shadow: 0 4px 16px rgba(99,102,241,.38); }
+    .btn-human { background: var(--hm-btn); color: #fff; flex: 1; }
+    .btn-human:hover:not(:disabled) { background: var(--hm-btn-h); box-shadow: 0 4px 16px rgba(5,150,105,.38); }
+
+    /* ── Form ────────────────────────────────────────── */
+    .field { margin-bottom: 1rem; }
+    label {
+      display: block; font-size: .78rem; font-weight: 700;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: .06em; margin-bottom: .32rem;
+    }
+    input[type="email"], input[type="text"] {
+      width: 100%; padding: .72rem 1rem;
+      border: 2px solid var(--border); border-radius: 10px;
+      font-size: 1rem; color: var(--text); background: #fff;
+      transition: border-color var(--tr); outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+    input.invalid { border-color: #dc2626; }
+    .err { color: #dc2626; font-size: .78rem; margin-top: .25rem; display: none; }
+    .err.show { display: block; }
+
+    /* ── Progress ────────────────────────────────────── */
+    .prog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; font-size: .88rem; font-weight: 700; }
+    .prog-track  { height: 7px; background: var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 1.4rem; }
+    .prog-fill   { height: 100%; background: linear-gradient(90deg, var(--accent), #f4a261); border-radius: 999px; transition: width .4s ease; }
+
+    /* ── Image zone ──────────────────────────────────── */
+    .img-zone {
+      width: 100%; aspect-ratio: 4/3;
+      border-radius: 12px; overflow: hidden;
+      background: #f1f5f9; margin-bottom: 1.4rem;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+
+    .blue-circle {
+      width: 52%; aspect-ratio: 1; border-radius: 50%;
+      background: radial-gradient(circle at 32% 32%, #93c5fd 0%, #3b82f6 48%, #1e3a8a 100%);
+      box-shadow: 0 10px 36px rgba(59,130,246,.4);
+      animation: pulse 3s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1);    box-shadow: 0 10px 36px rgba(59,130,246,.4); }
+      50%       { transform: scale(1.04); box-shadow: 0 14px 48px rgba(59,130,246,.55); }
+    }
+
+    .real-img { width: 100%; height: 100%; object-fit: cover; display: none; }
+
+    /* ── Answer buttons ──────────────────────────────── */
+    .answer-hint { text-align: center; font-size: .9rem; color: var(--muted); margin-bottom: .9rem; }
+    .answer-row  { display: flex; gap: .7rem; }
+
+    /* ── Divider ─────────────────────────────────────── */
+    .divider { height: 1px; background: var(--border); margin: 1.4rem 0; }
+
+    /* ── Score display ───────────────────────────────── */
+    .score-box {
+      text-align: center; padding: 1.4rem 1rem;
+      background: linear-gradient(135deg, #fdf4ff, #ede9fe);
+      border-radius: 13px; margin-bottom: 1.4rem;
+    }
+    .score-big  { font-size: clamp(2.8rem, 10vw, 4.2rem); font-weight: 900; color: var(--accent); line-height: 1; }
+    .score-of   { font-size: .95rem; color: var(--muted); margin-top: .2rem; }
+    .score-pct  { font-size: 1.3rem; font-weight: 800; margin-top: .4rem; }
+    .score-msg  { font-size: .9rem;  margin-top: .5rem; }
+    .c-green  { color: #059669; }
+    .c-blue   { color: #3b82f6; }
+    .c-orange { color: #f59e0b; }
+    .c-red    { color: #dc2626; }
+
+    /* ── Leaderboard ─────────────────────────────────── */
+    .lb-title { font-size: .95rem; font-weight: 800; margin-bottom: .65rem; display: flex; align-items: center; gap: .4rem; }
+    .lb-row   { display: flex; align-items: center; padding: .55rem .7rem; border-radius: 9px; margin-bottom: .35rem; background: #f8fafc; }
+    .lb-row.me { background: linear-gradient(135deg,#fff7ed,#ffedd5); font-weight: 700; }
+    .lb-rank  { width: 2.1rem; flex-shrink: 0; font-size: .82rem; font-weight: 800; color: var(--muted); }
+    .lb-rank.g { color: #f59e0b; }
+    .lb-rank.s { color: #9ca3af; }
+    .lb-rank.b { color: #b45309; }
+    .lb-name  { flex: 1; font-size: .92rem; }
+    .lb-pts   { font-size: .88rem; font-weight: 800; color: var(--accent); }
+    .lb-empty { text-align: center; color: var(--muted); font-size: .88rem; padding: .75rem 0; }
+
+    /* ── Spinner ─────────────────────────────────────── */
+    .spinner {
+      width: 1.8rem; height: 1.8rem; margin: 1rem auto;
+      border: 3px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ───────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 1.5rem; left: 50%;
+      transform: translateX(-50%) translateY(5rem);
+      background: #1e293b; color: #fff;
+      padding: .65rem 1.4rem; border-radius: 999px;
+      font-size: .87rem; transition: transform .3s ease;
+      z-index: 999; white-space: nowrap; pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Gap utility ─────────────────────────────────── */
+    .gap { height: 1rem; }
+
+    /* ── Mobile ──────────────────────────────────────── */
+    @media (max-width: 440px) {
+      .answer-row { flex-direction: column; }
+      .btn-ai, .btn-human { flex: unset; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════ WELCOME ════════════════════ -->
+<div id="s-welcome" class="screen active">
+  <div class="card">
+    <div style="font-size:3.2rem;margin-bottom:.75rem;">✍️</div>
+    <h1>Generate<br>or Not?</h1>
+    <p class="sub">Can you tell the difference between AI-generated handwriting and real human writing? Face 20 challenges and climb the leaderboard!</p>
+    <button class="btn btn-primary" onclick="App.goRegister()">Play Now &rarr;</button>
+  </div>
+</div>
+
+<!-- ════════════════════ REGISTER ════════════════════ -->
+<div id="s-register" class="screen">
+  <div class="card">
+    <h2>Who are you?</h2>
+    <p class="sub" style="margin-bottom:1.4rem;">Your details appear on the leaderboard.</p>
+
+    <div class="field">
+      <label for="f-email">Email address</label>
+      <input type="email" id="f-email" placeholder="you@example.com" autocomplete="email">
+      <div class="err" id="e-email">Please enter a valid email address.</div>
+    </div>
+    <div class="field">
+      <label for="f-first">First name</label>
+      <input type="text" id="f-first" placeholder="John" autocomplete="given-name">
+      <div class="err" id="e-first">Please enter your first name.</div>
+    </div>
+    <div class="field">
+      <label for="f-last">Last name</label>
+      <input type="text" id="f-last" placeholder="Doe" autocomplete="family-name">
+      <div class="err" id="e-last">Please enter your last name.</div>
+    </div>
+
+    <div class="gap"></div>
+    <button class="btn btn-primary" id="btn-go" onclick="App.startGame()">Start Playing &rarr;</button>
+    <button class="btn btn-ghost" onclick="App.goWelcome()">&larr; Back</button>
+  </div>
+</div>
+
+<!-- ════════════════════ GAME ════════════════════════ -->
+<div id="s-game" class="screen">
+  <div class="card">
+    <div class="prog-header">
+      <span id="q-label">Question 1 / 20</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+
+    <div class="img-zone" id="img-zone">
+      <div class="blue-circle" id="placeholder"></div>
+      <img class="real-img" id="real-img" alt="Handwriting sample">
+    </div>
+
+    <p class="answer-hint">Is this text &hellip;</p>
+    <div class="answer-row" id="answer-row">
+      <button class="btn btn-ai"    id="btn-ai"    onclick="App.answer(1)">🤖 AI-Generated</button>
+      <button class="btn btn-human" id="btn-human" onclick="App.answer(2)">✍️ Human</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ RESULTS ════════════════════ -->
+<div id="s-results" class="screen">
+  <div class="card">
+    <h2 id="res-title">Game Over!</h2>
+
+    <div class="score-box">
+      <div class="score-big"  id="res-score">—</div>
+      <div class="score-of"   id="res-of">out of 20</div>
+      <div class="score-pct"  id="res-pct">—</div>
+      <div class="score-msg"  id="res-msg"></div>
+    </div>
+
+    <div class="lb-title">🏆 Leaderboard</div>
+    <div id="lb-body"><div class="spinner"></div></div>
+
+    <div class="divider"></div>
+    <button class="btn btn-primary" onclick="App.playAgain()">Play Again</button>
+    <button class="btn btn-ghost"   onclick="App.changePlayer()">Change Player</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+"use strict";
+const App = (() => {
+  const S = {
+    player:    null,
+    sessionId: null,
+    question:  null,
+    order:     0,
+    total:     20,
+    score:     0,
+    busy:      false,
+  };
+
+  // ── Screen helpers ───────────────────────────────────
+  const screens = ["welcome","register","game","results"];
+  function show(name) {
+    screens.forEach(id => {
+      const el = document.getElementById("s-" + id);
+      const on = id === name;
+      el.classList.toggle("active", on);
+      if (on) {
+        const card = el.querySelector(".card");
+        if (card) { card.style.animation = "none"; void card.offsetWidth; card.style.animation = ""; }
+      }
+    });
+  }
+
+  // ── Navigation ───────────────────────────────────────
+  function goWelcome()  { show("welcome"); }
+  function goRegister() { show("register"); document.getElementById("f-email").focus(); }
+
+  // ── Validation helpers ───────────────────────────────
+  function setField(id, errId, bad) {
+    document.getElementById(id).classList.toggle("invalid", bad);
+    document.getElementById(errId).classList.toggle("show", bad);
+  }
+
+  // ── Start game ───────────────────────────────────────
+  async function startGame() {
+    const email = document.getElementById("f-email").value.trim();
+    const first = document.getElementById("f-first").value.trim();
+    const last  = document.getElementById("f-last").value.trim();
+
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    setField("f-email", "e-email", !emailOk);
+    setField("f-first", "e-first", !first);
+    setField("f-last",  "e-last",  !last);
+    if (!emailOk || !first || !last) return;
+
+    const btn = document.getElementById("btn-go");
+    btn.textContent = "Loading…"; btn.disabled = true;
+
+    try {
+      const pRes = await api("POST", "/api/players", { email, first_name: first, last_name: last });
+      S.player = pRes;
+      await launchSession();
+    } catch {
+      toast("Could not connect to the server. Please try again.");
+    } finally {
+      btn.textContent = "Start Playing →"; btn.disabled = false;
+    }
+  }
+
+  async function playAgain() {
+    if (!S.player) { goRegister(); return; }
+    try {
+      await launchSession();
+    } catch {
+      toast("Could not start a new game. Please try again.");
+    }
+  }
+
+  function changePlayer() {
+    // Pre-fill form with current player
+    if (S.player) {
+      document.getElementById("f-email").value = S.player.email;
+      document.getElementById("f-first").value = S.player.first_name;
+      document.getElementById("f-last").value  = S.player.last_name;
+    }
+    show("register");
+  }
+
+  async function launchSession() {
+    const sRes = await api("POST", "/api/sessions", { player_id: S.player.id });
+    S.sessionId = sRes.session_id;
+    S.total     = sRes.total_questions;
+    S.question  = sRes.question;
+    S.order     = sRes.question.order;
+    S.score     = 0;
+    S.busy      = false;
+    renderQuestion();
+    show("game");
+  }
+
+  // ── Render question ──────────────────────────────────
+  function renderQuestion() {
+    const q = S.question;
+    document.getElementById("q-label").textContent = `Question ${q.order} / ${S.total}`;
+    document.getElementById("prog").style.width    = `${((q.order - 1) / S.total) * 100}%`;
+
+    const ph  = document.getElementById("placeholder");
+    const img = document.getElementById("real-img");
+    if (q.is_placeholder) {
+      ph.style.display  = "block";
+      img.style.display = "none";
+    } else {
+      ph.style.display  = "none";
+      img.src            = `/api/images/${q.image_path}`;
+      img.style.display  = "block";
+    }
+
+    setAnswerBtns(false);
+  }
+
+  // ── Answer ───────────────────────────────────────────
+  async function answer(choice) {
+    if (S.busy) return;
+    S.busy = true;
+    setAnswerBtns(true);
+
+    try {
+      const res = await api("POST", `/api/sessions/${S.sessionId}/answer`, {
+        question_order: S.order,
+        answer: choice,
+      });
+
+      if (res.is_correct) S.score++;
+
+      if (res.finished) {
+        showResults(res.score, res.total_questions);
+      } else {
+        S.question = res.next_question;
+        S.order    = res.next_question.order;
+        S.busy     = false;
+        renderQuestion();
+      }
+    } catch {
+      toast("Error submitting answer. Please try again.");
+      S.busy = false;
+      setAnswerBtns(false);
+    }
+  }
+
+  function setAnswerBtns(disabled) {
+    document.getElementById("btn-ai").disabled    = disabled;
+    document.getElementById("btn-human").disabled = disabled;
+  }
+
+  // ── Results ──────────────────────────────────────────
+  async function showResults(score, total) {
+    show("results");
+
+    const pct = Math.round((score / total) * 100);
+    document.getElementById("res-score").textContent = score;
+    document.getElementById("res-of").textContent    = `out of ${total}`;
+    document.getElementById("res-pct").textContent   = `${pct}%`;
+
+    let title, cls, msg;
+    if (pct >= 90)      { title = "Outstanding! 🎉"; cls = "c-green";  msg = "You're a handwriting detective!"; }
+    else if (pct >= 70) { title = "Great job! 👍";   cls = "c-blue";   msg = "You have a sharp eye."; }
+    else if (pct >= 50) { title = "Not bad! 🙂";     cls = "c-orange"; msg = "Keep practising!"; }
+    else                { title = "Tough round 😅";  cls = "c-red";    msg = "AI fooled you this time!"; }
+
+    document.getElementById("res-title").textContent = title;
+    const msgEl = document.getElementById("res-msg");
+    msgEl.textContent = msg; msgEl.className = "score-msg " + cls;
+
+    document.getElementById("lb-body").innerHTML = '<div class="spinner"></div>';
+
+    try {
+      const lb = await api("GET", "/api/leaderboard?limit=10");
+      renderLeaderboard(lb, score);
+    } catch {
+      document.getElementById("lb-body").innerHTML = '<p class="lb-empty">Could not load leaderboard.</p>';
+    }
+  }
+
+  function renderLeaderboard(rows, currentScore) {
+    if (!rows.length) {
+      document.getElementById("lb-body").innerHTML = '<p class="lb-empty">No scores yet — be the first!</p>';
+      return;
+    }
+    const html = rows.map((r, i) => {
+      const me = S.player && r.player_id === S.player.id && r.best_score === currentScore;
+      const rankMark = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${r.rank}`;
+      const rankCls  = i === 0 ? "g"  : i === 1 ? "s"  : i === 2 ? "b"  : "";
+      return `<div class="lb-row${me ? " me" : ""}">
+        <div class="lb-rank ${rankCls}">${rankMark}</div>
+        <div class="lb-name">${esc(r.name)}${me ? ' <span style="color:var(--accent);font-size:.78rem">(you)</span>' : ""}</div>
+        <div class="lb-pts">${r.best_score}/${r.total_questions}</div>
+      </div>`;
+    }).join("");
+    document.getElementById("lb-body").innerHTML = html;
+  }
+
+  // ── Toast ─────────────────────────────────────────────
+  function toast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg; el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 3200);
+  }
+
+  // ── Fetch helper ─────────────────────────────────────
+  async function api(method, url, body) {
+    const opts = { method, headers: { "Content-Type": "application/json" } };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(url, opts);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  return { goWelcome, goRegister, startGame, answer, playAgain, changePlayer };
+})();
+</script>
+</body>
+</html>
