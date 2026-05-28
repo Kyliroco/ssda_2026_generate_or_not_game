@@ -204,6 +204,45 @@
       .cm-n { font-size: 1.5rem; }
       .cm-metrics { grid-template-columns: 1fr 1fr; }
     }
+
+    /* ── Clear DB modal ──────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,.45); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; padding: 1rem;
+      opacity: 0; pointer-events: none; transition: opacity .2s ease;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal-card {
+      background: var(--card); border-radius: var(--radius); padding: 1.6rem 1.5rem;
+      width: 100%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      transform: translateY(12px) scale(.97); transition: transform .2s ease;
+    }
+    .modal-overlay.open .modal-card { transform: translateY(0) scale(1); }
+    .modal-title { font-size: 1.05rem; font-weight: 800; margin-bottom: .35rem; color: var(--red); }
+    .modal-sub   { font-size: .85rem; color: var(--muted); margin-bottom: 1.1rem; line-height: 1.5; }
+    .modal-input {
+      width: 100%; padding: .65rem .9rem; margin-bottom: .9rem;
+      border: 2px solid var(--border); border-radius: 9px;
+      font-size: 1rem; outline: none; transition: border-color .2s;
+    }
+    .modal-input:focus { border-color: var(--red); }
+    .modal-input.shake { animation: shake .3s ease; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25%      { transform: translateX(-6px); }
+      75%      { transform: translateX(6px); }
+    }
+    .modal-actions { display: flex; gap: .6rem; }
+    .btn-danger  { flex: 1; padding: .65rem; border: none; border-radius: 9px; font-size: .9rem; font-weight: 700; cursor: pointer; background: var(--red); color: #fff; transition: opacity .2s; }
+    .btn-danger:hover { opacity: .85; }
+    .btn-danger:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-cancel  { flex: 1; padding: .65rem; border: 2px solid var(--border); border-radius: 9px; font-size: .9rem; font-weight: 700; cursor: pointer; background: transparent; color: var(--muted); transition: border-color .2s, color .2s; }
+    .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
+
+    /* Clear button in header */
+    .btn-danger-sm { background: #fff0f0; border: 2px solid #fecaca; color: var(--red); }
+    .btn-danger-sm:hover { background: #fee2e2; border-color: #fca5a5; }
   </style>
 </head>
 <body>
@@ -218,6 +257,7 @@
     <div class="header-right">
       <a href="/" class="btn-sm btn-outline">← Game</a>
       <button class="btn-sm btn-accent" onclick="Admin.refresh()">↻ Refresh</button>
+      <button class="btn-sm btn-danger-sm" onclick="Admin.openClear()">🗑 Clear DB</button>
     </div>
   </div>
 
@@ -251,6 +291,20 @@
   </div>
 
 </div>
+<!-- Clear DB modal -->
+<div class="modal-overlay" id="clear-modal" onclick="Admin.closeClear(event)">
+  <div class="modal-card">
+    <div class="modal-title">🗑 Clear all data</div>
+    <p class="modal-sub">This will permanently delete all players, sessions and answers. Enter the admin password to confirm.</p>
+    <input class="modal-input" type="password" id="clear-pwd" placeholder="Password"
+           onkeydown="if(event.key==='Enter') Admin.confirmClear(); if(event.key==='Escape') Admin.closeClear()">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="Admin.closeClear()">Cancel</button>
+      <button class="btn-danger" id="btn-confirm-clear" onclick="Admin.confirmClear()">Clear</button>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
 const Admin = (() => {
@@ -530,8 +584,51 @@ const Admin = (() => {
     return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   }
 
+  // ── Clear DB modal ────────────────────────────────────
+  function openClear() {
+    document.getElementById("clear-pwd").value = "";
+    document.getElementById("clear-modal").classList.add("open");
+    setTimeout(() => document.getElementById("clear-pwd").focus(), 80);
+  }
+
+  function closeClear(e) {
+    if (e && e.target !== document.getElementById("clear-modal")) return;
+    document.getElementById("clear-modal").classList.remove("open");
+  }
+
+  async function confirmClear() {
+    const pwd = document.getElementById("clear-pwd").value;
+    const btn = document.getElementById("btn-confirm-clear");
+    btn.textContent = "Clearing…"; btn.disabled = true;
+
+    try {
+      const res = await fetch("/api/admin/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwd }),
+      });
+
+      if (res.status === 403) {
+        const input = document.getElementById("clear-pwd");
+        input.value = "";
+        input.classList.add("shake");
+        setTimeout(() => input.classList.remove("shake"), 350);
+        input.focus();
+        return;
+      }
+      if (!res.ok) throw new Error();
+
+      document.getElementById("clear-modal").classList.remove("open");
+      await refresh();
+    } catch {
+      alert("Server error. Please try again.");
+    } finally {
+      btn.textContent = "Clear"; btn.disabled = false;
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", init);
-  return { setTab, filter, sortBy, refresh };
+  return { setTab, filter, sortBy, refresh, openClear, closeClear, confirmClear };
 })();
 </script>
 </body>

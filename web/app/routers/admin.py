@@ -1,8 +1,13 @@
-"""Admin read-only endpoints for the /results dashboard."""
+"""Admin endpoints for the /results dashboard."""
 
-from fastapi import APIRouter
+import os
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from ..database import get_db
+
+_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "SSDA26")
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -163,3 +168,18 @@ def get_questions() -> list[dict]:
         }
         for r in rows
     ]
+
+
+class ClearRequest(BaseModel):
+    password: str
+
+
+@router.post("/clear")
+def clear_database(data: ClearRequest) -> dict:
+    if data.password != _ADMIN_PASSWORD:
+        raise HTTPException(status_code=403, detail="Invalid password")
+    with get_db() as conn:
+        conn.execute(
+            "TRUNCATE session_questions, game_sessions, players RESTART IDENTITY CASCADE"
+        )
+    return {"status": "cleared"}
