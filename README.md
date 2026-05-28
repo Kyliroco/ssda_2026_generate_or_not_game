@@ -96,7 +96,8 @@ Expected folders:
 Important behavior:
 
 - The scan is recursive in dataset folders `/1`, `/2`, `/3`, and `/4`.
-- Altered images from `/1`, `/3`, `/4` are only eligible when the same filename exists somewhere under `/data/data/2`.
+- Altered images from `/1` are only eligible when the same filename exists somewhere under `/data/data/2`.
+- Altered images from `/3` and `/4` are used directly (no filename matching filter).
 - For an altered question, the app performs a second random choice to pick one available altered dataset among `/1`, `/3`, `/4`.
 - Human images are read from `/data/data/2`.
 
